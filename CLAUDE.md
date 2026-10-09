@@ -19,6 +19,10 @@ backend/src/
   db/                  # base (DeclarativeBase + TimestampMixin), session
   models/ schemas/ services/ repositories/
 backend/alembic/       # migrations
+frontend/src/
+  app/                 # App, providers, routes
+  features/<name>/     # pages, hooks, types per feature
+  lib/                 # api.ts (request wrapper, ApiError), queryClient
 ```
 
 Backend imports are absolute from `src/`: `from core.config import ...` — `src/` is on `sys.path` via pytest `pythonpath`, alembic `prepend_sys_path` and uvicorn `--app-dir`.
@@ -26,20 +30,36 @@ Backend imports are absolute from `src/`: `from core.config import ...` — `src
 ## Commands
 
 ```bash
+# Postgres only (host port 5432 — stop Artlas's DB first if it's running)
+docker compose up -d postgres
+
 # Backend
 cd backend && uv sync
+uv run alembic upgrade head
 uv run uvicorn main:app --reload --app-dir src
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
-uv run mypy src
-uv run alembic upgrade head
+uv run mypy src tests
+
+# Frontend (Node 24 — `nvm use`)
+cd frontend && npm install
+npm run dev
+npm run typecheck
+npm test
+
+# Full stack
+docker compose up --build
 ```
+
+Health check: `GET /api/v1/health`.
 
 ## Conventions
 
 - **Errors**: raise `AppException` subclasses from `core/exceptions.py`. Don't return ad-hoc error JSON.
 - **Layering**: endpoint → service → repository → model. Services commit; repositories don't.
 - **Time**: store `timestamptz` in UTC; business rules (sittings, opening days) are in `Europe/Lisbon`.
+- **Frontend API**: always `request()` from `lib/api.ts`, never raw `fetch`. Query keys: `['resource', ...inputs]`.
+- **Pre-commit**: `pre-commit install` once per clone. Keep the ruff hook `rev` in sync with ruff in `backend/uv.lock`. CI (`.github/workflows/ci.yml`) runs the full backend + frontend checks.
 
 ## Git workflow
 
