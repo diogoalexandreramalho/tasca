@@ -31,7 +31,7 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0  # no floating major tags since v8
         with:
           enable-cache: true
       - run: uv sync --locked
