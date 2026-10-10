@@ -36,6 +36,7 @@ docker compose up -d postgres
 # Backend
 cd backend && uv sync
 uv run alembic upgrade head
+PYTHONPATH=src uv run python -m db.seed        # tables + sittings (idempotent)
 uv run uvicorn main:app --reload --app-dir src
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
@@ -58,6 +59,7 @@ Health check: `GET /api/v1/health`.
 - **Errors**: raise `AppException` subclasses from `core/exceptions.py`. Don't return ad-hoc error JSON.
 - **Layering**: endpoint → service → repository → model. Services commit; repositories don't.
 - **Time**: store `timestamptz` in UTC; business rules (sittings, opening days) are in `Europe/Lisbon`.
+- **Booking rules** live in `services/booking_rules.py` as pure functions (`now` is passed in, never read from the clock) so they're unit-testable. Party-size-vs-table-capacity is enforced only there, not in the DB (a CHECK can't read another table).
 - **Frontend API**: always `request()` from `lib/api.ts`, never raw `fetch`. Query keys: `['resource', ...inputs]`.
 - **Pre-commit**: `pre-commit install` once per clone. Keep the ruff hook `rev` in sync with ruff in `backend/uv.lock`. CI (`.github/workflows/ci.yml`) runs the full backend + frontend checks.
 
