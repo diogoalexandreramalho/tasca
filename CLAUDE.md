@@ -36,6 +36,7 @@ docker compose up -d postgres
 # Backend
 cd backend && uv sync
 uv run alembic upgrade head
+PYTHONPATH=src uv run python -m db.seed        # tables + sittings (idempotent)
 uv run uvicorn main:app --reload --app-dir src
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
@@ -58,6 +59,7 @@ Health check: `GET /api/v1/health`.
 - **Errors**: raise `AppException` subclasses from `core/exceptions.py`. Don't return ad-hoc error JSON.
 - **Layering**: endpoint → service → repository → model. Services commit; repositories don't.
 - **Time**: store `timestamptz` in UTC; business rules (sittings, opening days) are in `Europe/Lisbon`.
+- **Booking rules** live in `services/booking_rules.py` as pure functions (`now` is passed in, never read from the clock) so they're unit-testable. Party-size-vs-table-capacity is enforced only there, not in the DB (a CHECK can't read another table).
 - **Frontend API**: always `request()` from `lib/api.ts`, never raw `fetch`. Query keys: `['resource', ...inputs]`.
 - **Pre-commit**: `pre-commit install` once per clone. Keep the ruff hook `rev` in sync with ruff in `backend/uv.lock`. CI (`.github/workflows/ci.yml`) runs the full backend + frontend checks.
 
@@ -66,5 +68,12 @@ Health check: `GET /api/v1/health`.
 - Short-lived branches off `main`, named `<type>/<slug>` (e.g. `feat/booking-core`).
 - Commits: `<type>(<scope>): <imperative summary>`. Types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`. Scopes: `api`, `db`, `agent`, `sms`, `frontend`, `tests`, `ci`, `deps`.
 - No direct pushes to `main`; open a PR and squash-merge. PR body: Summary / Test plan / Notes.
+
+## Tests
+
+- `tests/unit/`: pure functions, no DB. Run by the pre-commit hook.
+- `tests/integration/`: real Postgres in a separate `tasca_test` DB (created + migrated from scratch per run; override with `TEST_DATABASE_URL`). Needs `docker compose up -d postgres`. Never touches the dev `tasca` DB.
+- Services take `now` as a parameter — pass a fixed datetime in tests, never rely on the real clock.
+- Race tests use the `force_collision` fixture (a barrier) so both bookings really read before either inserts. Without it the second call is still connecting when the first commits and the retry path never runs.
 
 Update this file when a non-obvious convention or gotcha is introduced.
