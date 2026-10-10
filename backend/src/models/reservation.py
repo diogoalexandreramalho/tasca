@@ -1,12 +1,18 @@
 import enum
 import uuid
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, Date, Enum, ForeignKey, Index, SmallInteger, Text, text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from models.booking_slot import BookingSlot
+    from models.customer import Customer
+    from models.dining_table import DiningTable
 
 
 class ReservationStatus(enum.StrEnum):
@@ -55,3 +61,9 @@ class Reservation(Base, TimestampMixin):
     )
     # Free text. Allergies start with "Alergia:" so the dashboard can highlight them.
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # lazy="raise": async sessions can't lazy-load, so load these explicitly
+    # (see repositories/reservation.py) and fail loudly if we forget.
+    customer: Mapped["Customer"] = relationship(lazy="raise")
+    table: Mapped["DiningTable"] = relationship(lazy="raise")
+    booking_slot: Mapped["BookingSlot"] = relationship(lazy="raise")

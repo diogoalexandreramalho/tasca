@@ -44,6 +44,18 @@ class ValidationAppError(AppException):
     message = "Invalid input."
 
 
+class BookingRejectedError(AppException):
+    """A booking request broke a rule or nothing was free. `details["reason"]` says which."""
+
+    status_code = 409
+    code = "booking_rejected"
+    message = "The booking can't be made."
+
+    def __init__(self, reason: str, message: str | None = None) -> None:
+        super().__init__(message, details={"reason": reason})
+        self.reason = reason
+
+
 async def _app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,

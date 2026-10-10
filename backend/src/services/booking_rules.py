@@ -27,6 +27,8 @@ class Rejection(enum.StrEnum):
     IN_THE_PAST = "in_the_past"
     TOO_SOON = "too_soon"
     TOO_FAR_AHEAD = "too_far_ahead"
+    # Set by the reservation service when no suitable table is free, never by `check_booking`.
+    FULLY_BOOKED = "fully_booked"
 
 
 def slot_start(reservation_date: date, start_time: time) -> datetime:
