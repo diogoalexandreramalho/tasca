@@ -135,6 +135,18 @@ async def create_reservation(
     raise BookingRejectedError(Rejection.FULLY_BOOKED)
 
 
+async def get_reservation(session: AsyncSession, *, reservation_id: uuid.UUID) -> Reservation:
+    reservation = await reservation_repo.get_by_id(session, reservation_id)
+    if reservation is None:
+        raise NotFoundError("Reservation not found.")
+    return reservation
+
+
+async def list_day(session: AsyncSession, *, reservation_date: date) -> Sequence[Reservation]:
+    """Every confirmed booking on a date, including sittings that already happened."""
+    return await reservation_repo.list_confirmed_by_date(session, reservation_date=reservation_date)
+
+
 def _upcoming(reservations: Sequence[Reservation], now: datetime) -> list[Reservation]:
     return [
         r for r in reservations if slot_start(r.reservation_date, r.booking_slot.start_time) > now
@@ -165,9 +177,7 @@ async def find_upcoming_by_name_and_date(
 async def cancel_reservation(
     session: AsyncSession, *, reservation_id: uuid.UUID, now: datetime
 ) -> Reservation:
-    reservation = await reservation_repo.get_by_id(session, reservation_id)
-    if reservation is None:
-        raise NotFoundError("Reservation not found.")
+    reservation = await get_reservation(session, reservation_id=reservation_id)
     if reservation.status is ReservationStatus.CANCELLED:
         raise ConflictError("Reservation is already cancelled.")
     if slot_start(reservation.reservation_date, reservation.booking_slot.start_time) <= now:
