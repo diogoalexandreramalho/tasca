@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router';
 
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
-import { HomePage } from '@/features/home/HomePage';
+import { DayViewPage } from '@/features/reservations/DayViewPage';
 
 export function AppRoutes() {
   return (
@@ -12,7 +12,7 @@ export function AppRoutes() {
         path="/"
         element={
           <RequireAuth>
-            <HomePage />
+            <DayViewPage />
           </RequireAuth>
         }
       />
