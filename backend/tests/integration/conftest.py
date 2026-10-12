@@ -18,10 +18,12 @@ from sqlalchemy import create_engine, make_url, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from api.v1.deps import get_now
+from core.security import create_access_token
 from db.seed import seed
 from db.session import get_session
 from main import app
 from services.booking_rules import RESTAURANT_TZ
+from tests.conftest import TEST_ADMIN_USERNAME
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 TEST_DATABASE_URL = os.environ.get(
@@ -87,10 +89,10 @@ def clock() -> Clock:
 
 
 @pytest.fixture
-async def api_client(
+async def anon_client(
     session_factory: async_sessionmaker[AsyncSession], clock: Clock
 ) -> AsyncIterator[AsyncClient]:
-    """HTTP client for the real app, wired to the test database and the test clock."""
+    """HTTP client for the real app, wired to the test database and the test clock. No token."""
 
     async def test_session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as s:
@@ -101,3 +103,10 @@ async def api_client(
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def api_client(anon_client: AsyncClient) -> AsyncClient:
+    """Same as `anon_client`, logged in as the admin."""
+    anon_client.headers["Authorization"] = f"Bearer {create_access_token(TEST_ADMIN_USERNAME)}"
+    return anon_client

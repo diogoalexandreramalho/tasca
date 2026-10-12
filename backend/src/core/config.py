@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -23,6 +23,15 @@ class Settings(BaseSettings):
 
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
 
+    # Single admin account, configured here rather than in the DB. Generate the
+    # hash with `PYTHONPATH=src uv run python -m core.hash_password`.
+    admin_username: str = "admin"
+    admin_password_hash: str = Field(min_length=1)
+
+    jwt_secret_key: str = Field(min_length=32)  # e.g. `openssl rand -hex 32`
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 12 * 60  # one working day
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, v: Any) -> Any:
@@ -33,4 +42,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # type: ignore[call-arg]  # required fields come from the environment

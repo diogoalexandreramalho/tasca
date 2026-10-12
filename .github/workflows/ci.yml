@@ -15,6 +15,10 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # Settings require these at import time (e.g. `alembic upgrade`); tests set their own.
+      JWT_SECRET_KEY: ci-only-secret-key-that-is-at-least-32-chars
+      ADMIN_PASSWORD_HASH: ci-only-not-a-real-hash
     services:
       postgres:
         image: postgres:16

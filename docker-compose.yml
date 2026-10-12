@@ -18,6 +18,11 @@ services:
   backend:
     build:
       context: ./backend
+    # Admin credentials and JWT secret (see backend/.env.example). `environment`
+    # below overrides the DB URLs to point at the compose network.
+    env_file:
+      - path: ./backend/.env
+        required: false
     environment:
       DATABASE_URL: postgresql+asyncpg://tasca:tasca@postgres:5432/tasca
       SYNC_DATABASE_URL: postgresql+psycopg://tasca:tasca@postgres:5432/tasca

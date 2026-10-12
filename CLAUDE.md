@@ -56,7 +56,8 @@ Health check: `GET /api/v1/health`.
 
 ## Conventions
 
-- **Errors**: raise `AppException` subclasses from `core/exceptions.py`. Don't return ad-hoc error JSON.
+- **Errors**: raise `AppException` subclasses from `core/exceptions.py`. Don't return ad-hoc error JSON. FastAPI's own validation 422s are converted to `ValidationAppError`, so every error is `{code, message, details}`.
+- **Auth**: one admin account from env (`ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`, `JWT_SECRET_KEY`), no users table. `POST /api/v1/auth/token` (OAuth2 password form) → 12 h bearer token. Routers are protected in `api/v1/router.py` with `dependencies=[Depends(require_admin)]`; only `/health` and `/auth/token` are public. Generate the hash with `PYTHONPATH=src uv run python -m core.hash_password` and keep it single-quoted in `.env` (it contains `$`). The app won't start without these vars.
 - **Layering**: endpoint → service → repository → model. Services commit; repositories don't.
 - **Time**: store `timestamptz` in UTC; business rules (sittings, opening days) are in `Europe/Lisbon`.
 - **Booking rules** live in `services/booking_rules.py` as pure functions (`now` is passed in, never read from the clock) so they're unit-testable. Party-size-vs-table-capacity is enforced only there, not in the DB (a CHECK can't read another table).
