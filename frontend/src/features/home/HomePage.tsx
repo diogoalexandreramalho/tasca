@@ -1,7 +1,9 @@
 import { useHealth } from '@/features/home/useHealth';
+import { useSlots } from '@/features/home/useSlots';
 
 export function HomePage() {
   const { isPending, isError } = useHealth();
+  const slots = useSlots();
 
   const status = isPending
     ? { label: 'Checking API…', dot: 'bg-stone-400' }
@@ -19,6 +21,11 @@ export function HomePage() {
         <span className={`h-2 w-2 rounded-full ${status.dot}`} aria-hidden />
         {status.label}
       </p>
+      {slots.data && (
+        <p className="mt-2 text-sm text-stone-600">
+          Sittings: {slots.data.map((s) => s.start_time.slice(0, 5)).join(' · ')}
+        </p>
+      )}
     </section>
   );
 }
