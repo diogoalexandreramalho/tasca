@@ -64,19 +64,17 @@ async def _app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
     )
 
 
-async def _request_validation_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
-    """Give FastAPI's own 422s (bad query params, bodies) the same shape as AppException."""
+async def _request_validation_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """FastAPI raises this itself before our code runs (bad query params, bodies).
+
+    Convert it to a ValidationAppError so every error goes through one formatter.
+    """
     errors = [
         {"field": ".".join(str(p) for p in e["loc"][1:]), "message": e["msg"]} for e in exc.errors()
     ]
-    return JSONResponse(
-        status_code=422,
-        content={
-            "code": ValidationAppError.code,
-            "message": ValidationAppError.message,
-            "details": {"errors": errors},
-        },
-    )
+    return await _app_exception_handler(request, ValidationAppError(details={"errors": errors}))
 
 
 def register_exception_handlers(app: FastAPI) -> None:
