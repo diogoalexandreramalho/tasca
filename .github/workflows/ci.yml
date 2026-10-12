@@ -18,7 +18,9 @@ jobs:
     env:
       # Settings require these at import time (e.g. `alembic upgrade`); tests set their own.
       JWT_SECRET_KEY: ci-only-secret-key-that-is-at-least-32-chars
-      ADMIN_PASSWORD_HASH: ci-only-not-a-real-hash
+      # Must be a well-formed argon2 hash (checked at startup). Hash of a throwaway
+      # string, not a real login; tests override it with their own.
+      ADMIN_PASSWORD_HASH: $argon2id$v=19$m=65536,t=3,p=4$Wskr6wfrhK89NJEK8bL5fg$cSnh8BPgjTSOhEgQ4kEYNsnZfSo3GOOnCmMV3OO/exg
     services:
       postgres:
         image: postgres:16
