@@ -6,15 +6,22 @@ also exercises the migrations). Each test starts from freshly seeded tables.
 
 import os
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 from alembic import command
 from alembic.config import Config
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine, make_url, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from api.v1.deps import get_now
 from db.seed import seed
+from db.session import get_session
+from main import app
+from services.booking_rules import RESTAURANT_TZ
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 TEST_DATABASE_URL = os.environ.get(
@@ -66,3 +73,31 @@ async def session(
 ) -> AsyncIterator[AsyncSession]:
     async with session_factory() as s:
         yield s
+
+
+@dataclass
+class Clock:
+    now: datetime
+
+
+@pytest.fixture
+def clock() -> Clock:
+    """What the API thinks "now" is. Tests can move it: `clock.now = ...`."""
+    return Clock(now=datetime(2026, 10, 14, 10, 0, tzinfo=RESTAURANT_TZ))  # Wednesday
+
+
+@pytest.fixture
+async def api_client(
+    session_factory: async_sessionmaker[AsyncSession], clock: Clock
+) -> AsyncIterator[AsyncClient]:
+    """HTTP client for the real app, wired to the test database and the test clock."""
+
+    async def test_session() -> AsyncIterator[AsyncSession]:
+        async with session_factory() as s:
+            yield s
+
+    app.dependency_overrides[get_session] = test_session
+    app.dependency_overrides[get_now] = lambda: clock.now
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()

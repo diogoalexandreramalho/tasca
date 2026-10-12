@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -63,5 +64,19 @@ async def _app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
     )
 
 
+async def _request_validation_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """FastAPI raises this itself before our code runs (bad query params, bodies).
+
+    Convert it to a ValidationAppError so every error goes through one formatter.
+    """
+    errors = [
+        {"field": ".".join(str(p) for p in e["loc"][1:]), "message": e["msg"]} for e in exc.errors()
+    ]
+    return await _app_exception_handler(request, ValidationAppError(details={"errors": errors}))
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppException, _app_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RequestValidationError, _request_validation_handler)  # type: ignore[arg-type]

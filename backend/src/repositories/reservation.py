@@ -35,6 +35,22 @@ async def taken_table_ids(
     return set(result.scalars().all())
 
 
+async def list_confirmed_by_date(
+    session: AsyncSession, *, reservation_date: date
+) -> Sequence[Reservation]:
+    """The day view: every confirmed booking on a date, by sitting then table."""
+    result = await session.execute(
+        _with_details()
+        .join(Reservation.booking_slot)
+        .where(
+            Reservation.reservation_date == reservation_date,
+            Reservation.status == ReservationStatus.CONFIRMED,
+        )
+        .order_by(BookingSlot.start_time, Reservation.table_id)
+    )
+    return result.scalars().all()
+
+
 async def list_confirmed_by_phone(
     session: AsyncSession, *, phone: str, from_date: date
 ) -> Sequence[Reservation]:

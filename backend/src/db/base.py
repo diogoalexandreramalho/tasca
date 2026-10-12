@@ -20,6 +20,11 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
+    # Fetch server-generated values (created_at/updated_at) with RETURNING on
+    # INSERT/UPDATE. Otherwise they're expired after a flush, and reading them in
+    # an async session tries a lazy load and fails.
+    __mapper_args__ = {"eager_defaults": True}  # noqa: RUF012
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
