@@ -61,6 +61,7 @@ async def _app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
         content={"code": exc.code, "message": exc.message, "details": exc.details},
+        headers={"WWW-Authenticate": "Bearer"} if isinstance(exc, UnauthorizedError) else None,
     )
 
 
