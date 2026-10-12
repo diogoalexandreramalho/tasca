@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -63,5 +64,21 @@ async def _app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
     )
 
 
+async def _request_validation_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    """Give FastAPI's own 422s (bad query params, bodies) the same shape as AppException."""
+    errors = [
+        {"field": ".".join(str(p) for p in e["loc"][1:]), "message": e["msg"]} for e in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={
+            "code": ValidationAppError.code,
+            "message": ValidationAppError.message,
+            "details": {"errors": errors},
+        },
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppException, _app_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RequestValidationError, _request_validation_handler)  # type: ignore[arg-type]
