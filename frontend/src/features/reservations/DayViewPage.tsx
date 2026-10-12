@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 
+import { NewBookingPanel } from '@/features/reservations/NewBookingPanel';
 import { useDayReservations, useSlots } from '@/features/reservations/queries';
 import type { BookingSlot, Reservation } from '@/features/reservations/types';
 import { addDays, formatLongDate, formatTime, isIsoDate, todayInLisbon } from '@/lib/dates';
@@ -30,9 +32,20 @@ export function DayViewPage() {
 
   const slots = useSlots();
   const reservations = useDayReservations(date);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
 
   function goTo(next: string) {
     setSearchParams(next === today ? {} : { date: next });
+  }
+
+  function handleCreated(r: Reservation) {
+    setPanelOpen(false);
+    setFlash(
+      `Booked ${r.customer.name} · ${plural(r.party_size, 'guest')} · ` +
+        `${formatTime(r.booking_slot.start_time)} at table ${r.table.name}.`,
+    );
+    goTo(r.reservation_date);
   }
 
   const isLoading = slots.isPending || reservations.isPending;
@@ -77,8 +90,43 @@ export function DayViewPage() {
             className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
             aria-label="Pick a date"
           />
+          <button
+            type="button"
+            onClick={() => {
+              setFlash(null);
+              setPanelOpen(true);
+            }}
+            className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700"
+          >
+            + New booking
+          </button>
         </div>
       </div>
+
+      {flash && (
+        <div
+          role="status"
+          className="flex items-start justify-between gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+        >
+          <span>{flash}</span>
+          <button
+            type="button"
+            onClick={() => setFlash(null)}
+            className="text-emerald-700 hover:text-emerald-900"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {panelOpen && (
+        <NewBookingPanel
+          initialDate={date}
+          onClose={() => setPanelOpen(false)}
+          onCreated={handleCreated}
+        />
+      )}
 
       {isLoading && <p className="text-sm text-stone-500">Loading bookings…</p>}
       {error && (
