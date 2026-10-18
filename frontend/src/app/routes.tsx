@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { DayViewPage } from '@/features/reservations/DayViewPage';
+import { SearchPage } from '@/features/reservations/SearchPage';
 
 export function AppRoutes() {
   return (
@@ -13,6 +14,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <DayViewPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <RequireAuth>
+            <SearchPage />
           </RequireAuth>
         }
       />

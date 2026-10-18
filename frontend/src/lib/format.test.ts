@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { addDays, formatLongDate, formatTime, isIsoDate, todayInLisbon } from '@/lib/dates';
+import {
+  addDays,
+  formatLongDate,
+  formatShortDate,
+  formatTime,
+  hasStarted,
+  isIsoDate,
+  todayInLisbon,
+} from '@/lib/dates';
 import { formatPhone } from '@/lib/phone';
 
 describe('dates', () => {
@@ -18,6 +26,19 @@ describe('dates', () => {
   it('formats dates and times for display', () => {
     expect(formatLongDate('2026-10-16')).toBe('Friday, 16 October 2026');
     expect(formatTime('20:30:00')).toBe('20:30');
+  });
+
+  it('knows when a sitting has started, in Lisbon time', () => {
+    // 19:30 UTC on 16 Oct is 20:30 in Lisbon (summer time).
+    const now = new Date('2026-10-16T19:30:00Z');
+    expect(hasStarted('2026-10-16', '20:30:00', now)).toBe(true);
+    expect(hasStarted('2026-10-16', '20:31', now)).toBe(false);
+    expect(hasStarted('2026-10-15', '20:30:00', now)).toBe(true);
+    expect(hasStarted('2026-10-17', '12:00:00', now)).toBe(false);
+  });
+
+  it('formats short dates', () => {
+    expect(formatShortDate('2026-10-16')).toBe('Fri 16 Oct');
   });
 
   it('accepts only real YYYY-MM-DD dates', () => {
