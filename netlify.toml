@@ -1,0 +1,19 @@
+# Netlify build for the admin dashboard (Vite + React).
+# Set VITE_API_URL in the site's environment variables, e.g.
+# https://tasca-api.onrender.com/api/v1 — it's baked in at build time.
+
+[build]
+  base    = "frontend"
+  publish = "dist"
+  command = "npm run build"
+
+[build.environment]
+  # Match .nvmrc; react-router 8, vitest 5 and jsdom 30 need Node >= 22.
+  NODE_VERSION = "24"
+
+# SPA fallback: React Router owns routing, so a hard refresh on /search must
+# serve index.html instead of a 404.
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
