@@ -68,6 +68,25 @@ async def list_confirmed_by_phone(
     return result.scalars().all()
 
 
+async def list_confirmed_by_name(
+    session: AsyncSession, *, name: str, from_date: date, limit: int
+) -> Sequence[Reservation]:
+    """Case-insensitive partial match on any date from `from_date`, soonest first."""
+    result = await session.execute(
+        _with_details()
+        .join(Reservation.customer)
+        .join(Reservation.booking_slot)
+        .where(
+            Customer.name.icontains(name.strip(), autoescape=True),
+            Reservation.status == ReservationStatus.CONFIRMED,
+            Reservation.reservation_date >= from_date,
+        )
+        .order_by(Reservation.reservation_date, BookingSlot.start_time, Reservation.table_id)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+
 async def list_confirmed_by_name_and_date(
     session: AsyncSession, *, name: str, reservation_date: date
 ) -> Sequence[Reservation]:
