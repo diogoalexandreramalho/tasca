@@ -4,6 +4,8 @@ from typing import Any
 import pytest
 from httpx import AsyncClient
 
+from tests.integration.conftest import Clock
+
 # The test clock is Wednesday 14 Oct 2026, 10:00 Lisbon (see conftest).
 FRIDAY, SATURDAY, MONDAY = "2026-10-16", "2026-10-17", "2026-10-19"
 
@@ -169,11 +171,42 @@ class TestList:
 
         assert [r["id"] for r in found] == [ana["id"]]
 
+    async def test_by_name_alone_spans_dates_soonest_first(
+        self, api_client: AsyncClient, clock: Clock
+    ) -> None:
+        sat = await create(api_client, reservation_date=SATURDAY, phone="910000001")
+        fri_dinner = await create(api_client, start_time="20:30", phone="910000002")
+        fri_lunch = await create(api_client, start_time="12:00", phone="910000003")
+        cancelled = await create(api_client, start_time="19:00", phone="910000004")
+        await api_client.post(f"/api/v1/reservations/{cancelled['id']}/cancel")
+        await create(api_client, customer_name="Rui Costa", phone="910000009")
+        today_lunch = await create(api_client, reservation_date="2026-10-14", start_time="12:00")
+
+        found = await list_reservations(api_client, name="SILVA")
+
+        assert [r["id"] for r in found] == [
+            today_lunch["id"],
+            fri_lunch["id"],
+            fri_dinner["id"],
+            sat["id"],
+        ]
+
+        # Sittings that already started drop out.
+        clock.now = clock.now.replace(hour=13)
+        later = await list_reservations(api_client, name="silva")
+        assert today_lunch["id"] not in [r["id"] for r in later]
+
+    async def test_blank_name_is_422(self, api_client: AsyncClient) -> None:
+        response = await api_client.get("/api/v1/reservations", params={"name": "  "})
+
+        assert response.status_code == 422
+        assert response.json()["message"] == "Name is required."
+
     @pytest.mark.parametrize(
         "params",
         [
             {},
-            {"name": "ana"},
+            {"phone": "912345678", "name": "ana"},
             {"phone": "912345678", "date": FRIDAY},
             {"phone": "912345678", "name": "ana", "date": FRIDAY},
         ],

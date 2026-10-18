@@ -163,6 +163,22 @@ async def find_upcoming_by_phone(
     return _upcoming(reservations, now)
 
 
+NAME_SEARCH_LIMIT = 50
+
+
+async def find_upcoming_by_name(
+    session: AsyncSession, *, name: str, now: datetime
+) -> list[Reservation]:
+    """Upcoming bookings whose name contains `name`, on any date, soonest first."""
+    if not name.strip():
+        raise ValidationAppError("Name is required.")
+    today = now.astimezone(RESTAURANT_TZ).date()
+    reservations = await reservation_repo.list_confirmed_by_name(
+        session, name=name, from_date=today, limit=NAME_SEARCH_LIMIT
+    )
+    return _upcoming(reservations, now)
+
+
 async def find_upcoming_by_name_and_date(
     session: AsyncSession, *, name: str, reservation_date: date, now: datetime
 ) -> list[Reservation]:

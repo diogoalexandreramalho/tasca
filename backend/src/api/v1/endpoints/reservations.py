@@ -25,17 +25,20 @@ async def list_reservations(
 
     - `date`: the day view, every booking that day by sitting then table
     - `phone`: the customer's upcoming bookings
+    - `name`: upcoming bookings on any date whose name contains `name` (max 50)
     - `name` + `date`: upcoming bookings on that date whose name contains `name`
     """
     if phone is not None and date is None and name is None:
         return await reservations.find_upcoming_by_phone(session, phone=phone, now=now)
-    if name is not None and date is not None and phone is None:
+    if name is not None and phone is None:
+        if date is None:
+            return await reservations.find_upcoming_by_name(session, name=name, now=now)
         return await reservations.find_upcoming_by_name_and_date(
             session, name=name, reservation_date=date, now=now
         )
     if date is not None and phone is None and name is None:
         return await reservations.list_day(session, reservation_date=date)
-    raise ValidationAppError("Filter by `date`, by `phone`, or by `name` and `date`.")
+    raise ValidationAppError("Filter by `date`, by `phone`, by `name`, or by `name` and `date`.")
 
 
 @router.get("/{reservation_id}", response_model=ReservationRead)
