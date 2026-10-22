@@ -23,7 +23,7 @@ from db.seed import seed
 from db.session import get_session
 from main import app
 from services.booking_rules import RESTAURANT_TZ
-from tests.conftest import TEST_ADMIN_USERNAME
+from tests.conftest import TEST_ADMIN_USERNAME, TEST_AGENT_SECRET
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 TEST_DATABASE_URL = os.environ.get(
@@ -109,4 +109,11 @@ async def anon_client(
 def api_client(anon_client: AsyncClient) -> AsyncClient:
     """Same as `anon_client`, logged in as the admin."""
     anon_client.headers["Authorization"] = f"Bearer {create_access_token(TEST_ADMIN_USERNAME)}"
+    return anon_client
+
+
+@pytest.fixture
+def agent_client(anon_client: AsyncClient) -> AsyncClient:
+    """Same as `anon_client`, calling as the voice agent (shared secret header)."""
+    anon_client.headers["X-Agent-Secret"] = TEST_AGENT_SECRET
     return anon_client

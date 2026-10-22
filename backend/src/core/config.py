@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 12 * 60  # one working day
 
+    # Shared secret the voice agent (ElevenLabs) sends in the X-Agent-Secret header.
+    # Optional so the app still starts without it; while unset, every /agent route
+    # answers 401. Generate with `openssl rand -hex 32`.
+    agent_api_secret: str | None = Field(default=None, min_length=32)
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, v: Any) -> Any:
