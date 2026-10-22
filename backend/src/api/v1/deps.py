@@ -1,7 +1,8 @@
+import secrets
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Header
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,3 +43,18 @@ def require_admin(token: Annotated[str | None, Depends(oauth2_scheme)]) -> str:
 
 
 CurrentAdmin = Annotated[str, Depends(require_admin)]
+
+
+def require_agent(x_agent_secret: Annotated[str | None, Header()] = None) -> None:
+    """Reject the request unless it carries the voice agent's shared secret.
+
+    The agent is a machine, not a person: instead of logging in it sends a fixed
+    secret on every call (configured once in ElevenLabs). `compare_digest` takes
+    the same time whether the first or the last character differs, so the secret
+    can't be guessed one character at a time by timing responses.
+    """
+    expected = get_settings().agent_api_secret
+    if expected is None or x_agent_secret is None:
+        raise UnauthorizedError()
+    if not secrets.compare_digest(x_agent_secret.encode(), expected.encode()):
+        raise UnauthorizedError("Invalid agent secret.")
