@@ -1,12 +1,15 @@
 """The voice agent's tools, called over HTTP like ElevenLabs does."""
 
+from datetime import datetime
 from typing import Any
 
 import pytest
 from httpx import AsyncClient
 
 from core.security import create_access_token
+from services.booking_rules import RESTAURANT_TZ
 from tests.conftest import TEST_ADMIN_USERNAME
+from tests.integration.conftest import Clock
 
 # The test clock is Wednesday 14 Oct 2026, 10:00 Lisbon (see conftest).
 FRIDAY, MONDAY = "2026-10-16", "2026-10-19"
@@ -200,5 +203,133 @@ class TestCreateReservation:
 
     async def test_requires_the_secret(self, anon_client: AsyncClient) -> None:
         response = await anon_client.post("/api/v1/agent/create-reservation", json=booking())
+
+        assert response.status_code == 401
+
+
+async def find(client: AsyncClient, **body: Any) -> dict[str, Any]:
+    response = await client.post("/api/v1/agent/find-reservations", json=body)
+    assert response.status_code == 200, response.text
+    result: dict[str, Any] = response.json()
+    return result
+
+
+async def cancel(client: AsyncClient, reservation_id: str, phone: str) -> dict[str, Any]:
+    response = await client.post(
+        "/api/v1/agent/cancel-reservation",
+        json={"reservation_id": reservation_id, "phone": phone},
+    )
+    assert response.status_code == 200, response.text
+    result: dict[str, Any] = response.json()
+    return result
+
+
+class TestFindReservations:
+    async def test_lists_only_this_phones_upcoming_bookings(
+        self, agent_client: AsyncClient
+    ) -> None:
+        await create(agent_client, date="2026-10-17", time="13:30", party_size=3)
+        await create(agent_client, date=FRIDAY, time="20:30", party_size=2)
+        await create(agent_client, phone="910000009", name="Rui Costa")  # someone else
+
+        body = await find(agent_client, phone="+351 912 345 678")
+
+        # Soonest first; only id, date, time, party size and name.
+        assert [
+            {k: r[k] for k in ("date", "time", "party_size", "name")} for r in body["reservations"]
+        ] == [
+            {"date": FRIDAY, "time": "20:30", "party_size": 2, "name": "Ana Silva"},
+            {"date": "2026-10-17", "time": "13:30", "party_size": 3, "name": "Ana Silva"},
+        ]
+        assert set(body["reservations"][0]) == {"id", "date", "time", "party_size", "name"}
+        assert "field" not in body
+
+    async def test_can_narrow_to_one_day(self, agent_client: AsyncClient) -> None:
+        await create(agent_client, date="2026-10-17", time="13:30")
+        await create(agent_client, date=FRIDAY, time="20:30")
+
+        body = await find(agent_client, phone="912345678", date="2026-10-17")
+
+        assert [r["date"] for r in body["reservations"]] == ["2026-10-17"]
+
+    async def test_skips_sittings_that_already_started(
+        self, agent_client: AsyncClient, clock: Clock
+    ) -> None:
+        await create(agent_client, date=FRIDAY, time="12:00")
+        await create(agent_client, date=FRIDAY, time="20:30")
+        clock.now = datetime(2026, 10, 16, 13, 0, tzinfo=RESTAURANT_TZ)  # Friday after lunch
+
+        body = await find(agent_client, phone="912345678")
+
+        assert [r["time"] for r in body["reservations"]] == ["20:30"]
+
+    async def test_nothing_found_is_an_empty_list(self, agent_client: AsyncClient) -> None:
+        assert await find(agent_client, phone="919999999") == {"reservations": []}
+
+    async def test_invalid_phone_asks_for_it_again(self, agent_client: AsyncClient) -> None:
+        assert await find(agent_client, phone="12345") == {"reservations": [], "field": "phone"}
+
+    async def test_requires_the_secret(self, anon_client: AsyncClient) -> None:
+        response = await anon_client.post(
+            "/api/v1/agent/find-reservations", json={"phone": "912345678"}
+        )
+
+        assert response.status_code == 401
+
+
+class TestCancelReservation:
+    async def test_cancels_and_frees_the_table(
+        self, agent_client: AsyncClient, api_client: AsyncClient
+    ) -> None:
+        await create(agent_client)
+        [r] = (await find(agent_client, phone="912345678"))["reservations"]
+
+        assert await cancel(agent_client, r["id"], "912 345 678") == {"status": "cancelled"}
+
+        assert await day_view(api_client, FRIDAY) == []
+        assert await find(agent_client, phone="912345678") == {"reservations": []}
+        # The same table can be booked again.
+        assert await create(agent_client, phone="910000001") == {"status": "booked"}
+
+    async def test_someone_elses_booking_is_not_found(
+        self, agent_client: AsyncClient, api_client: AsyncClient
+    ) -> None:
+        await create(agent_client)
+        [r] = (await find(agent_client, phone="912345678"))["reservations"]
+
+        assert await cancel(agent_client, r["id"], "910000009") == {"status": "not_found"}
+        assert len(await day_view(api_client, FRIDAY)) == 1  # still booked
+
+    @pytest.mark.parametrize(
+        "reservation_id",
+        ["00000000-0000-0000-0000-000000000000", "not-a-uuid", ""],
+    )
+    async def test_unknown_or_garbled_id_is_not_found(
+        self, agent_client: AsyncClient, reservation_id: str
+    ) -> None:
+        assert await cancel(agent_client, reservation_id, "912345678") == {"status": "not_found"}
+
+    async def test_cancelling_twice(self, agent_client: AsyncClient) -> None:
+        await create(agent_client)
+        [r] = (await find(agent_client, phone="912345678"))["reservations"]
+        await cancel(agent_client, r["id"], "912345678")
+
+        assert await cancel(agent_client, r["id"], "912345678") == {"status": "already_cancelled"}
+
+    async def test_too_late_once_the_sitting_started(
+        self, agent_client: AsyncClient, api_client: AsyncClient, clock: Clock
+    ) -> None:
+        await create(agent_client)
+        [r] = (await find(agent_client, phone="912345678"))["reservations"]
+        clock.now = datetime(2026, 10, 16, 20, 45, tzinfo=RESTAURANT_TZ)
+
+        assert await cancel(agent_client, r["id"], "912345678") == {"status": "too_late"}
+        assert len(await day_view(api_client, FRIDAY)) == 1
+
+    async def test_requires_the_secret(self, anon_client: AsyncClient) -> None:
+        response = await anon_client.post(
+            "/api/v1/agent/cancel-reservation",
+            json={"reservation_id": "00000000-0000-0000-0000-000000000000", "phone": "912345678"},
+        )
 
         assert response.status_code == 401

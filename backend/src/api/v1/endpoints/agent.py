@@ -10,6 +10,7 @@ Each tool is a thin translation layer:
 All routes require the X-Agent-Secret header (see `require_agent` in router.py).
 """
 
+import uuid
 from collections.abc import Sequence
 from datetime import date, datetime, time
 
@@ -17,16 +18,22 @@ from fastapi import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.v1.deps import DbSession, Now
-from core.exceptions import BookingRejectedError, ValidationAppError
+from core.exceptions import BookingRejectedError, NotFoundError, ValidationAppError
 from core.phone import normalize_phone
+from models import ReservationStatus
 from schemas.agent import (
+    AgentReservation,
+    CancelReservationReply,
+    CancelReservationRequest,
     CheckAvailabilityReply,
     CheckAvailabilityRequest,
     CreateReservationReply,
     CreateReservationRequest,
+    FindReservationsReply,
+    FindReservationsRequest,
 )
 from services import reservations, restaurant
-from services.booking_rules import Rejection
+from services.booking_rules import Rejection, slot_start
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -137,3 +144,65 @@ async def create_reservation(
         return CreateReservationReply(status="rejected", reason=reason, available_times=times)
 
     return CreateReservationReply(status="booked")
+
+
+@router.post(
+    "/find-reservations",
+    response_model=FindReservationsReply,
+    response_model_exclude_none=True,
+)
+async def find_reservations(
+    session: DbSession, now: Now, body: FindReservationsRequest
+) -> FindReservationsReply:
+    """The caller's upcoming bookings. Phone is required on purpose: knowing the
+    number a booking was made with is what proves it's theirs, so nobody can ask
+    "is there a booking for João?" and learn about other people's plans."""
+    try:
+        phone = normalize_phone(body.phone)
+    except ValidationAppError:
+        return FindReservationsReply(reservations=[], field="phone")
+
+    found = await reservations.find_upcoming_by_phone(session, phone=phone, now=now)
+    if body.date is not None:
+        found = [r for r in found if r.reservation_date == body.date]
+    return FindReservationsReply(
+        reservations=[
+            AgentReservation(
+                id=str(r.id),
+                date=r.reservation_date,
+                time=r.booking_slot.start_time.strftime("%H:%M"),
+                party_size=r.party_size,
+                name=r.customer.name,
+            )
+            for r in found
+        ]
+    )
+
+
+@router.post("/cancel-reservation", response_model=CancelReservationReply)
+async def cancel_reservation(
+    session: DbSession, now: Now, body: CancelReservationRequest
+) -> CancelReservationReply:
+    """Cancel one of the caller's bookings, by the id find_reservations returned.
+
+    The phone must match the booking's, so a confused or manipulated model can't
+    cancel a stranger's booking just by holding an id. A wrong id and someone
+    else's booking both answer `not_found`, revealing nothing about which.
+    """
+    try:
+        reservation_id = uuid.UUID(body.reservation_id)
+        phone = normalize_phone(body.phone)
+        reservation = await reservations.get_reservation(session, reservation_id=reservation_id)
+    except (ValueError, ValidationAppError, NotFoundError):
+        return CancelReservationReply(status="not_found")
+    if reservation.customer.phone != phone:
+        return CancelReservationReply(status="not_found")
+
+    # Checked here (the service checks again) so each case gets its own status.
+    if reservation.status is ReservationStatus.CANCELLED:
+        return CancelReservationReply(status="already_cancelled")
+    if slot_start(reservation.reservation_date, reservation.booking_slot.start_time) <= now:
+        return CancelReservationReply(status="too_late")
+
+    await reservations.cancel_reservation(session, reservation_id=reservation_id, now=now)
+    return CancelReservationReply(status="cancelled")

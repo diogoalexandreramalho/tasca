@@ -66,3 +66,45 @@ class CreateReservationReply(BaseModel):
     field: Literal["name", "phone", "time"] | None = Field(
         default=None, description="Which input to ask the caller for again."
     )
+
+
+class FindReservationsRequest(BaseModel):
+    phone: str = Field(description="Phone number the booking was made with, any format.")
+    date: dt.date | None = Field(
+        default=None, description="Optional. Only bookings on this day, YYYY-MM-DD."
+    )
+
+
+class AgentReservation(BaseModel):
+    """Just enough to confirm a booking with the caller and cancel it. No table,
+    no notes, no phone: the caller already knows their own number."""
+
+    id: str = Field(description="Pass to cancel_reservation. Never read it aloud.")
+    date: dt.date
+    time: str = Field(description='"HH:MM"')
+    party_size: int
+    name: str
+
+
+class FindReservationsReply(BaseModel):
+    reservations: list[AgentReservation] = Field(
+        description="Upcoming confirmed bookings for this phone, soonest first."
+    )
+    field: Literal["phone"] | None = Field(
+        default=None, description="Present when the phone number is invalid: ask for it again."
+    )
+
+
+class CancelReservationRequest(BaseModel):
+    # A string, not a UUID: a garbled id from the model is just "not_found".
+    reservation_id: str = Field(description="The `id` from find_reservations.")
+    phone: str = Field(description="Phone number the booking was made with.")
+
+
+class CancelReservationReply(BaseModel):
+    status: Literal["cancelled", "not_found", "already_cancelled", "too_late"] = Field(
+        description=(
+            "cancelled: done. not_found: no such booking for this phone. "
+            "already_cancelled: nothing to do. too_late: the sitting has already started."
+        )
+    )
