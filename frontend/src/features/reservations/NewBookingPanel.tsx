@@ -207,7 +207,7 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
               />
             </label>
             <span id={`${titleId}-notes-hint`} className="text-stone-500">
-              Start allergies with “Alergia:” so they're highlighted.
+              Start allergies with “Allergy:” so they're highlighted.
             </span>
           </div>
 

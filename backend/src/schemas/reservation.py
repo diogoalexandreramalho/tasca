@@ -14,7 +14,7 @@ class ReservationCreate(BaseModel):
     customer_name: str = Field(min_length=1, max_length=120)
     phone: str = Field(max_length=32, description="Any format; national numbers default to PT.")
     notes: str | None = Field(
-        default=None, max_length=1000, description='Allergies start with "Alergia:".'
+        default=None, max_length=1000, description='Allergies start with "Allergy:".'
     )
 
 

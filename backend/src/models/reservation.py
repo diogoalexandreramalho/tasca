@@ -59,7 +59,7 @@ class Reservation(Base, TimestampMixin):
         nullable=False,
         default=ReservationStatus.CONFIRMED,
     )
-    # Free text. Allergies start with "Alergia:" so the dashboard can highlight them.
+    # Free text. Allergies start with "Allergy:" so the dashboard can highlight them.
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # lazy="raise": async sessions can't lazy-load, so load these explicitly
