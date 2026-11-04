@@ -48,7 +48,9 @@ class CreateReservationRequest(BaseModel):
     phone: str = Field(description="Caller's phone number, any format.")
     notes: str | None = Field(
         default=None,
-        description='Optional. Allergies must start with "Alergia:", e.g. "Alergia: marisco".',
+        description=(
+            'Optional. Allergies must start with "Allergy:", e.g. "Allergy: shellfish (1 person)".'
+        ),
     )
 
 

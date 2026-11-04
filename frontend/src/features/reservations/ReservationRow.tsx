@@ -7,7 +7,8 @@ import { ApiError } from '@/lib/api';
 import { formatShortDate, formatTime, hasStarted } from '@/lib/dates';
 import { formatPhone } from '@/lib/phone';
 
-/** Allergies are stored in the notes, starting with "Alergia:" (see backend model). */
+/** Allergies are stored in the notes, starting with "Allergy:" (see backend model).
+ * Older notes may use the Portuguese "Alergia:"; both are highlighted. */
 export function hasAllergy(notes: string | null): boolean {
   return notes !== null && /alergia|allerg/i.test(notes);
 }

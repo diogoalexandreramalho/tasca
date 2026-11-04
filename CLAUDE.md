@@ -1,6 +1,6 @@
 # Tasca
 
-Phone voice agent for a fictional Lisbon restaurant (Tasca Tagarela), plus an admin dashboard. The agent handles bookings only (check, book, find, cancel) and must never invent facts; it speaks European Portuguese. Code, docs and commits are in English. Deployed: Netlify (dashboard) → Render (API) → Neon (Postgres), configured in each provider's dashboard.
+Phone voice agent for a fictional Lisbon restaurant (Tasca Tagarela), plus an admin dashboard. The agent handles bookings only (check, book, find, cancel) and must never invent facts; it speaks English. Its prompt, voice and tool definitions are configured in the ElevenLabs dashboard. Code, docs and commits are in English. Deployed: Netlify (dashboard) → Render (API) → Neon (Postgres), configured in each provider's dashboard.
 
 ## Stack
 
