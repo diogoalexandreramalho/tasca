@@ -33,6 +33,7 @@ def _bookings(c: CallWithBookings) -> list[CallBooking]:
 def _read(c: CallWithBookings) -> CallRead:
     return CallRead(
         id=c.call.id,
+        conversation_id=c.call.conversation_id,
         started_at=c.call.started_at,
         duration_secs=c.call.duration_secs,
         outcome=c.call.outcome,
@@ -52,7 +53,16 @@ async def list_calls(session: DbSession, date: dt.date | None = None) -> list[Ca
 
 @router.get("/{call_id}", response_model=CallDetail)
 async def get_call(session: DbSession, call_id: uuid.UUID) -> CallDetail:
-    c = await calls.get_call(session, call_id=call_id)
+    return _detail(await calls.get_call(session, call_id=call_id))
+
+
+@router.get("/by-conversation/{conversation_id}", response_model=CallDetail)
+async def get_call_by_conversation(session: DbSession, conversation_id: str) -> CallDetail:
+    """Open a booking's call: bookings store the ElevenLabs conversation id."""
+    return _detail(await calls.get_call_by_conversation(session, conversation_id=conversation_id))
+
+
+def _detail(c: CallWithBookings) -> CallDetail:
     transcript = (
         [TranscriptLine.model_validate(line) for line in c.call.transcript]
         if c.call.transcript is not None

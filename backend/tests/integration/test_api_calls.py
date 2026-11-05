@@ -58,6 +58,7 @@ class TestListCalls:
 
         assert set(call) == {
             "id",
+            "conversation_id",
             "started_at",
             "duration_secs",
             "outcome",
@@ -129,6 +130,25 @@ class TestCallDetail:
         assert detail["summary"] is None
         assert detail["transcript"] is None
 
+    async def test_can_be_fetched_by_conversation_id(
+        self, anon_client: AsyncClient, api_client: AsyncClient
+    ) -> None:
+        # What the dashboard does from a booking, which only knows the conversation id.
+        await send(anon_client, payload("conv_xyz", started=MORNING_14TH))
+        [listed] = await list_calls(api_client, date="2026-10-14")
+
+        response = await api_client.get("/api/v1/calls/by-conversation/conv_xyz")
+
+        assert response.status_code == 200
+        assert response.json()["id"] == listed["id"]
+        assert response.json()["conversation_id"] == "conv_xyz"
+        assert response.json()["transcript"]
+
+    async def test_unknown_conversation_is_404(self, api_client: AsyncClient) -> None:
+        response = await api_client.get("/api/v1/calls/by-conversation/conv_nope")
+
+        assert response.status_code == 404
+
     async def test_unknown_call_is_404(self, api_client: AsyncClient) -> None:
         response = await api_client.get("/api/v1/calls/00000000-0000-0000-0000-000000000000")
 
@@ -138,6 +158,7 @@ class TestCallDetail:
 class TestAuth:
     async def test_requires_the_admin_login(self, anon_client: AsyncClient) -> None:
         assert (await anon_client.get("/api/v1/calls")).status_code == 401
+        assert (await anon_client.get("/api/v1/calls/by-conversation/x")).status_code == 401
 
     async def test_the_agent_secret_is_not_enough(self, agent_client: AsyncClient) -> None:
         # Transcripts are for staff only.

@@ -111,7 +111,17 @@ async def list_calls(session: AsyncSession, *, day: date | None) -> list[CallWit
 
 
 async def get_call(session: AsyncSession, *, call_id: uuid.UUID) -> CallWithBookings:
-    call = await call_repo.get_by_id(session, call_id)
+    return await _found(session, await call_repo.get_by_id(session, call_id))
+
+
+async def get_call_by_conversation(
+    session: AsyncSession, *, conversation_id: str
+) -> CallWithBookings:
+    """The call a booking links to (bookings store the conversation id, not the call's)."""
+    return await _found(session, await call_repo.get_by_conversation_id(session, conversation_id))
+
+
+async def _found(session: AsyncSession, call: Call | None) -> CallWithBookings:
     if call is None:
         raise NotFoundError("Call not found.")
     [result] = await _with_bookings(session, [call])
