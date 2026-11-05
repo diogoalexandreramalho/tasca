@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router';
 
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
+import { CallsPage } from '@/features/calls/CallsPage';
 import { DayViewPage } from '@/features/reservations/DayViewPage';
 import { SearchPage } from '@/features/reservations/SearchPage';
 
@@ -14,6 +15,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <DayViewPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/calls"
+        element={
+          <RequireAuth>
+            <CallsPage />
           </RequireAuth>
         }
       />

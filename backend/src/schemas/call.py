@@ -21,6 +21,7 @@ class CallBooking(BaseModel):
 
 class CallRead(BaseModel):
     id: uuid.UUID
+    conversation_id: str  # what bookings link to (created/cancelled_in_conversation_id)
     started_at: datetime
     duration_secs: int
     outcome: CallOutcome

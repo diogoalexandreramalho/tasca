@@ -81,3 +81,8 @@ async def list_recent(session: AsyncSession, limit: int) -> Sequence[Call]:
 
 async def get_by_id(session: AsyncSession, call_id: uuid.UUID) -> Call | None:
     return await session.get(Call, call_id)
+
+
+async def get_by_conversation_id(session: AsyncSession, conversation_id: str) -> Call | None:
+    result = await session.execute(select(Call).where(Call.conversation_id == conversation_id))
+    return result.scalar_one_or_none()

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, NavLink, useNavigate } from 'react-router';
 
 import { AppRoutes } from '@/app/routes';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -10,18 +10,35 @@ export function App() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-3 px-6 py-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-2 gap-y-3 px-4 py-4 sm:gap-x-4 sm:px-6">
           <Link to="/" className="mr-auto">
             <span className="text-lg font-semibold tracking-tight">Tasca Tagarela</span>
-            <span className="ml-2 text-sm text-stone-500">admin</span>
+            <span className="ml-2 hidden text-sm text-stone-500 sm:inline">admin</span>
           </Link>
           {isAuthenticated && (
             <>
+              <nav aria-label="Main" className="flex gap-1 text-sm">
+                {[
+                  { to: '/', label: 'Bookings' },
+                  { to: '/calls', label: 'Calls' },
+                ].map(({ to, label }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end
+                    className={({ isActive }) =>
+                      `rounded-md px-2.5 py-1.5 sm:px-3 ${isActive ? 'bg-stone-900 text-white' : 'hover:bg-stone-100'}`
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                ))}
+              </nav>
               <SearchBox />
               <button
                 type="button"
                 onClick={logout}
-                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
+                className="rounded-md border border-stone-300 px-2.5 py-1.5 text-sm hover:bg-stone-100 sm:px-3"
               >
                 Log out
               </button>
@@ -29,7 +46,7 @@ export function App() {
           )}
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <AppRoutes />
       </main>
     </div>

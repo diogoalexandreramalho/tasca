@@ -17,6 +17,7 @@ export function reservation(overrides: {
   party_size?: number;
   notes?: string | null;
   date?: string;
+  conversationId?: string | null;
 }): Reservation {
   const id = nextId++;
   return {
@@ -32,6 +33,8 @@ export function reservation(overrides: {
     },
     table: { id, name: overrides.table ?? 'M1' },
     booking_slot: SLOTS[(overrides.slot ?? 1) - 1]!,
+    created_in_conversation_id: overrides.conversationId ?? null,
+    cancelled_in_conversation_id: null,
     created_at: '2026-10-14T09:00:00Z',
     updated_at: '2026-10-14T09:00:00Z',
   };
