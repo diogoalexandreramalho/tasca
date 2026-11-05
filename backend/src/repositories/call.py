@@ -1,7 +1,9 @@
+import uuid
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, or_, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -58,3 +60,24 @@ async def clear_personal_data_before(session: AsyncSession, cutoff: datetime) ->
         .values(summary=None, transcript=None, updated_at=func.now())
     )
     return result.rowcount  # type: ignore[attr-defined, no-any-return]
+
+
+async def list_started_between(
+    session: AsyncSession, start: datetime, end: datetime
+) -> Sequence[Call]:
+    """Calls that started in [start, end), newest first."""
+    result = await session.execute(
+        select(Call)
+        .where(Call.started_at >= start, Call.started_at < end)
+        .order_by(Call.started_at.desc())
+    )
+    return result.scalars().all()
+
+
+async def list_recent(session: AsyncSession, limit: int) -> Sequence[Call]:
+    result = await session.execute(select(Call).order_by(Call.started_at.desc()).limit(limit))
+    return result.scalars().all()
+
+
+async def get_by_id(session: AsyncSession, call_id: uuid.UUID) -> Call | None:
+    return await session.get(Call, call_id)

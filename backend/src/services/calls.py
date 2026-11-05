@@ -1,14 +1,19 @@
 """The call log: recording voice agent conversations when they end."""
 
-from datetime import UTC, datetime, timedelta
+import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
-from models import Call, CallOutcome
+from core.exceptions import NotFoundError
+from models import Call, CallOutcome, Reservation
 from repositories import call as call_repo
 from repositories import reservation as reservation_repo
 from schemas.webhooks import PostCallTranscription, TranscriptTurn
+from services.booking_rules import RESTAURANT_TZ
 
 # Our webhook tools. System tools (end_call, language detection) don't make a
 # call an "enquiry".
@@ -66,3 +71,48 @@ async def record_call(session: AsyncSession, data: PostCallTranscription, *, now
 
     await session.commit()
     return call
+
+
+@dataclass(frozen=True)
+class CallWithBookings:
+    call: Call
+    created: list[Reservation]  # bookings made during the call
+    cancelled: list[Reservation]  # bookings cancelled during the call
+
+
+RECENT_CALLS_LIMIT = 50
+
+
+async def _with_bookings(session: AsyncSession, calls: Sequence[Call]) -> list[CallWithBookings]:
+    reservations = await reservation_repo.list_by_conversations(
+        session, [c.conversation_id for c in calls]
+    )
+    return [
+        CallWithBookings(
+            call=c,
+            created=[r for r in reservations if r.created_in_conversation_id == c.conversation_id],
+            cancelled=[
+                r for r in reservations if r.cancelled_in_conversation_id == c.conversation_id
+            ],
+        )
+        for c in calls
+    ]
+
+
+async def list_calls(session: AsyncSession, *, day: date | None) -> list[CallWithBookings]:
+    """Calls that started on `day` (Lisbon time), or the most recent ones; newest first."""
+    if day is None:
+        calls = await call_repo.list_recent(session, RECENT_CALLS_LIMIT)
+    else:
+        start = datetime.combine(day, time.min, tzinfo=RESTAURANT_TZ)
+        end = datetime.combine(day + timedelta(days=1), time.min, tzinfo=RESTAURANT_TZ)
+        calls = await call_repo.list_started_between(session, start, end)
+    return await _with_bookings(session, calls)
+
+
+async def get_call(session: AsyncSession, *, call_id: uuid.UUID) -> CallWithBookings:
+    call = await call_repo.get_by_id(session, call_id)
+    if call is None:
+        raise NotFoundError("Call not found.")
+    [result] = await _with_bookings(session, [call])
+    return result
