@@ -58,7 +58,7 @@ async def session_factory(database_url: str) -> AsyncIterator[async_sessionmaker
     async with engine.begin() as conn:
         await conn.execute(
             text(
-                "TRUNCATE reservations, customers, dining_tables, booking_slots "
+                "TRUNCATE calls, reservations, customers, dining_tables, booking_slots "
                 "RESTART IDENTITY CASCADE"
             )
         )

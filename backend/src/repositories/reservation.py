@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import date
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -101,5 +101,40 @@ async def list_confirmed_by_name_and_date(
             Reservation.reservation_date == reservation_date,
         )
         .order_by(BookingSlot.start_time)
+    )
+    return result.scalars().all()
+
+
+async def conversation_activity(session: AsyncSession, conversation_id: str) -> tuple[bool, bool]:
+    """Whether this voice agent conversation (created, cancelled) any reservation."""
+    created = await session.scalar(
+        select(Reservation.id)
+        .where(Reservation.created_in_conversation_id == conversation_id)
+        .limit(1)
+    )
+    cancelled = await session.scalar(
+        select(Reservation.id)
+        .where(Reservation.cancelled_in_conversation_id == conversation_id)
+        .limit(1)
+    )
+    return created is not None, cancelled is not None
+
+
+async def list_by_conversations(
+    session: AsyncSession, conversation_ids: Sequence[str]
+) -> Sequence[Reservation]:
+    """Reservations created or cancelled in any of these conversations (one query)."""
+    if not conversation_ids:
+        return []
+    result = await session.execute(
+        _with_details()
+        .join(Reservation.booking_slot)
+        .where(
+            or_(
+                Reservation.created_in_conversation_id.in_(conversation_ids),
+                Reservation.cancelled_in_conversation_id.in_(conversation_ids),
+            )
+        )
+        .order_by(Reservation.reservation_date, BookingSlot.start_time)
     )
     return result.scalars().all()

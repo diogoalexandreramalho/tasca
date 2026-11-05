@@ -44,5 +44,8 @@ class ReservationRead(BaseModel):
     customer: CustomerRead
     table: ReservationTableRead
     booking_slot: BookingSlotRead
+    # Voice agent conversations that created / cancelled it (null = dashboard).
+    created_in_conversation_id: str | None
+    cancelled_in_conversation_id: str | None
     created_at: datetime
     updated_at: datetime

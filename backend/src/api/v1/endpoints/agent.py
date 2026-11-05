@@ -133,6 +133,7 @@ async def create_reservation(
             customer_name=name,
             phone=phone,
             notes=body.notes,
+            conversation_id=body.conversation_id,
             now=now,
         )
     except BookingRejectedError as exc:
@@ -204,5 +205,7 @@ async def cancel_reservation(
     if slot_start(reservation.reservation_date, reservation.booking_slot.start_time) <= now:
         return CancelReservationReply(status="too_late")
 
-    await reservations.cancel_reservation(session, reservation_id=reservation_id, now=now)
+    await reservations.cancel_reservation(
+        session, reservation_id=reservation_id, now=now, conversation_id=body.conversation_id
+    )
     return CancelReservationReply(status="cancelled")

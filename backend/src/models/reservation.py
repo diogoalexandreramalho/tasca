@@ -3,7 +3,17 @@ import uuid
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, Date, Enum, ForeignKey, Index, SmallInteger, Text, text
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    Enum,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -61,6 +71,15 @@ class Reservation(Base, TimestampMixin):
     )
     # Free text. Allergies start with "Allergy:" so the dashboard can highlight them.
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # The voice agent conversation (ElevenLabs id) that created / cancelled this
+    # booking, if any. Links bookings to the call log; null for dashboard actions.
+    created_in_conversation_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    cancelled_in_conversation_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
 
     # lazy="raise": async sessions can't lazy-load, so load these explicitly
     # (see repositories/reservation.py) and fail loudly if we forget.

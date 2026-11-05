@@ -52,6 +52,14 @@ class CreateReservationRequest(BaseModel):
             'Optional. Allergies must start with "Allergy:", e.g. "Allergy: shellfish (1 person)".'
         ),
     )
+    conversation_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "Filled in automatically by ElevenLabs (system__conversation_id), never by the "
+            "model. Links the booking to the call log."
+        ),
+    )
 
 
 class CreateReservationReply(BaseModel):
@@ -101,6 +109,14 @@ class CancelReservationRequest(BaseModel):
     # A string, not a UUID: a garbled id from the model is just "not_found".
     reservation_id: str = Field(description="The `id` from find_reservations.")
     phone: str = Field(description="Phone number the booking was made with.")
+    conversation_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "Filled in automatically by ElevenLabs (system__conversation_id), never by the "
+            "model. Links the booking to the call log."
+        ),
+    )
 
 
 class CancelReservationReply(BaseModel):

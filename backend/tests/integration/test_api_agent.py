@@ -333,3 +333,63 @@ class TestCancelReservation:
         )
 
         assert response.status_code == 401
+
+
+class TestConversationLink:
+    """Bookings record which voice agent conversation created / cancelled them."""
+
+    async def test_create_records_the_conversation(
+        self, agent_client: AsyncClient, api_client: AsyncClient
+    ) -> None:
+        await create(agent_client, conversation_id="conv_123")
+
+        [r] = await day_view(api_client, FRIDAY)
+        assert r["created_in_conversation_id"] == "conv_123"
+        assert r["cancelled_in_conversation_id"] is None
+
+    async def test_without_a_conversation_the_link_stays_empty(
+        self, agent_client: AsyncClient, api_client: AsyncClient
+    ) -> None:
+        await create(agent_client)
+
+        [r] = await day_view(api_client, FRIDAY)
+        assert r["created_in_conversation_id"] is None
+
+    async def test_cancel_records_the_conversation(
+        self, agent_client: AsyncClient, api_client: AsyncClient
+    ) -> None:
+        await create(agent_client, conversation_id="conv_booking")
+        [found] = (await find(agent_client, phone="912345678"))["reservations"]
+
+        response = await agent_client.post(
+            "/api/v1/agent/cancel-reservation",
+            json={
+                "reservation_id": found["id"],
+                "phone": "912345678",
+                "conversation_id": "conv_cancel",
+            },
+        )
+        assert response.json() == {"status": "cancelled"}
+
+        r = (await api_client.get(f"/api/v1/reservations/{found['id']}")).json()
+        assert r["status"] == "cancelled"
+        assert r["created_in_conversation_id"] == "conv_booking"
+        assert r["cancelled_in_conversation_id"] == "conv_cancel"
+
+    async def test_dashboard_actions_leave_both_links_empty(self, api_client: AsyncClient) -> None:
+        created = (
+            await api_client.post(
+                "/api/v1/reservations",
+                json={
+                    "reservation_date": FRIDAY,
+                    "start_time": "20:30",
+                    "party_size": 2,
+                    "customer_name": "Ana",
+                    "phone": "912345678",
+                },
+            )
+        ).json()
+        cancelled = (await api_client.post(f"/api/v1/reservations/{created['id']}/cancel")).json()
+
+        assert created["created_in_conversation_id"] is None
+        assert cancelled["cancelled_in_conversation_id"] is None

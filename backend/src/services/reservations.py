@@ -80,8 +80,10 @@ async def create_reservation(
     customer_name: str,
     phone: str,
     notes: str | None = None,
+    conversation_id: str | None = None,
     now: datetime,
 ) -> Reservation:
+    """`conversation_id`: the voice agent conversation making the booking, if any."""
     name = customer_name.strip()
     if not name:
         raise ValidationAppError("Customer name is required.")
@@ -116,6 +118,7 @@ async def create_reservation(
             party_size=party_size,
             status=ReservationStatus.CONFIRMED,
             notes=notes.strip() if notes and notes.strip() else None,
+            created_in_conversation_id=conversation_id,
         )
         try:
             async with session.begin_nested():
@@ -191,8 +194,13 @@ async def find_upcoming_by_name_and_date(
 
 
 async def cancel_reservation(
-    session: AsyncSession, *, reservation_id: uuid.UUID, now: datetime
+    session: AsyncSession,
+    *,
+    reservation_id: uuid.UUID,
+    now: datetime,
+    conversation_id: str | None = None,
 ) -> Reservation:
+    """`conversation_id`: the voice agent conversation cancelling it, if any."""
     reservation = await get_reservation(session, reservation_id=reservation_id)
     if reservation.status is ReservationStatus.CANCELLED:
         raise ConflictError("Reservation is already cancelled.")
@@ -200,5 +208,6 @@ async def cancel_reservation(
         raise ConflictError("Reservation has already started.")
 
     reservation.status = ReservationStatus.CANCELLED
+    reservation.cancelled_in_conversation_id = conversation_id
     await session.commit()
     return reservation
