@@ -103,3 +103,18 @@ async def list_confirmed_by_name_and_date(
         .order_by(BookingSlot.start_time)
     )
     return result.scalars().all()
+
+
+async def conversation_activity(session: AsyncSession, conversation_id: str) -> tuple[bool, bool]:
+    """Whether this voice agent conversation (created, cancelled) any reservation."""
+    created = await session.scalar(
+        select(Reservation.id)
+        .where(Reservation.created_in_conversation_id == conversation_id)
+        .limit(1)
+    )
+    cancelled = await session.scalar(
+        select(Reservation.id)
+        .where(Reservation.cancelled_in_conversation_id == conversation_id)
+        .limit(1)
+    )
+    return created is not None, cancelled is not None

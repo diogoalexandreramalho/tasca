@@ -9,7 +9,9 @@ from pwdlib import PasswordHash
 TEST_ADMIN_USERNAME = "admin"
 TEST_ADMIN_PASSWORD = "correct-horse-battery"
 TEST_AGENT_SECRET = "test-agent-secret-that-is-at-least-32-chars"
+TEST_WEBHOOK_SECRET = "wsec_test_webhook_secret"
 os.environ["AGENT_API_SECRET"] = TEST_AGENT_SECRET
+os.environ["ELEVENLABS_WEBHOOK_SECRET"] = TEST_WEBHOOK_SECRET
 os.environ["JWT_SECRET_KEY"] = "test-secret-key-that-is-at-least-32-chars"
 os.environ["ADMIN_USERNAME"] = TEST_ADMIN_USERNAME
 os.environ["ADMIN_PASSWORD_HASH"] = PasswordHash.recommended().hash(TEST_ADMIN_PASSWORD)

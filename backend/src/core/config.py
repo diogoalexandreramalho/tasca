@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     # answers 401. Generate with `openssl rand -hex 32`.
     agent_api_secret: str | None = Field(default=None, min_length=32)
 
+    # Secret ElevenLabs shows when you create the post-call webhook; used to verify
+    # its ElevenLabs-Signature header. Optional; while unset, every webhook is 401.
+    elevenlabs_webhook_secret: str | None = None
+
+    # Transcripts and summaries contain personal data; cleared after this many days.
+    call_transcript_retention_days: int = 90
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, v: Any) -> Any:
