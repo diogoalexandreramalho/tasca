@@ -22,9 +22,16 @@ type Props = {
   /** Show the date and sitting (search results); the day view groups by them instead. */
   showWhen?: boolean;
   onCancelled: (reservation: Reservation) => void;
+  /** Open the call that made this booking (only for bookings made by the voice agent). */
+  onOpenCall?: (conversationId: string) => void;
 };
 
-export function ReservationRow({ reservation: r, showWhen = false, onCancelled }: Props) {
+export function ReservationRow({
+  reservation: r,
+  showWhen = false,
+  onCancelled,
+  onOpenCall,
+}: Props) {
   const allergy = hasAllergy(r.notes);
   const cancel = useCancelReservation();
   const [confirming, setConfirming] = useState(false);
@@ -40,8 +47,8 @@ export function ReservationRow({ reservation: r, showWhen = false, onCancelled }
       <div
         className={`grid gap-x-3 gap-y-1 sm:items-center ${
           showWhen
-            ? 'grid-cols-[7.5rem_1fr_auto] sm:grid-cols-[7.5rem_minmax(8rem,1fr)_5rem_8rem_minmax(8rem,1.5fr)_5.5rem]'
-            : 'grid-cols-[4rem_1fr_auto] sm:grid-cols-[4rem_minmax(8rem,1fr)_5rem_8rem_minmax(8rem,1.5fr)_5.5rem]'
+            ? 'grid-cols-[7.5rem_1fr_auto] sm:grid-cols-[7.5rem_minmax(8rem,1fr)_5rem_8rem_minmax(8rem,1.5fr)_7.5rem]'
+            : 'grid-cols-[4rem_1fr_auto] sm:grid-cols-[4rem_minmax(8rem,1fr)_5rem_8rem_minmax(8rem,1.5fr)_7.5rem]'
         }`}
       >
         <span className="font-mono font-medium text-stone-700">
@@ -72,7 +79,18 @@ export function ReservationRow({ reservation: r, showWhen = false, onCancelled }
           {allergy && <span aria-hidden>⚠ </span>}
           {r.notes}
         </span>
-        <span className="col-start-2 sm:col-start-auto sm:text-right">
+        <span className="col-start-2 flex gap-3 sm:col-start-auto sm:justify-end">
+          {r.created_in_conversation_id && onOpenCall && (
+            <button
+              type="button"
+              onClick={() => onOpenCall(r.created_in_conversation_id!)}
+              className="whitespace-nowrap text-stone-500 underline-offset-2 hover:text-stone-900 hover:underline"
+              title="Booked by phone — view the call"
+              aria-label={`View the call that booked ${r.customer.name}`}
+            >
+              📞 call
+            </button>
+          )}
           {canCancel && !confirming && (
             <button
               type="button"

@@ -44,6 +44,9 @@ export type Reservation = {
   customer: { id: string; name: string; phone: string };
   table: { id: number; name: string };
   booking_slot: BookingSlot;
+  /** Voice agent conversations that created / cancelled it (null = dashboard). */
+  created_in_conversation_id: string | null;
+  cancelled_in_conversation_id: string | null;
   created_at: string;
   updated_at: string;
 };

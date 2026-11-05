@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   addDays,
+  formatDuration,
+  formatLisbonClock,
   formatLongDate,
   formatShortDate,
   formatTime,
   hasStarted,
   isIsoDate,
+  lisbonDateOf,
   todayInLisbon,
 } from '@/lib/dates';
 import { formatPhone } from '@/lib/phone';
@@ -53,5 +56,19 @@ describe('formatPhone', () => {
   it('groups Portuguese numbers and leaves others as stored', () => {
     expect(formatPhone('+351912345678')).toBe('912 345 678');
     expect(formatPhone('+447911123456')).toBe('+447911123456');
+  });
+});
+
+describe('call times', () => {
+  it('shows a timestamp as Lisbon wall-clock time and day', () => {
+    // 23:30 UTC on 13 Oct is 00:30 on the 14th in Lisbon (summer time).
+    expect(formatLisbonClock('2026-10-13T23:30:00Z')).toBe('00:30');
+    expect(lisbonDateOf('2026-10-13T23:30:00Z')).toBe('2026-10-14');
+  });
+
+  it('formats durations as minutes:seconds', () => {
+    expect(formatDuration(0)).toBe('0:00');
+    expect(formatDuration(9)).toBe('0:09');
+    expect(formatDuration(134)).toBe('2:14');
   });
 });

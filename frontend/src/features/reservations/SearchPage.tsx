@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
+import { CallPanel } from '@/features/calls/CallPanel';
 import { Flash, describeBooking } from '@/features/reservations/Flash';
 import { searchParamsFor, useSearchReservations } from '@/features/reservations/queries';
 import { ReservationRow, plural } from '@/features/reservations/ReservationRow';
 import type { Reservation } from '@/features/reservations/types';
+import { usePageParams } from '@/lib/usePageParams';
 
 export function SearchPage() {
   const [searchParams] = useSearchParams();
@@ -12,6 +14,7 @@ export function SearchPage() {
   const by = searchParamsFor(query);
   const results = useSearchReservations(query);
   const [flash, setFlash] = useState<string | null>(null);
+  const { call, openCall, closeCall } = usePageParams();
 
   function handleCancelled(r: Reservation) {
     setFlash(`Cancelled ${describeBooking(r)}. The table is free again.`);
@@ -58,11 +61,19 @@ export function SearchPage() {
             </header>
             <ul className="divide-y divide-stone-100">
               {results.data.map((r) => (
-                <ReservationRow key={r.id} reservation={r} showWhen onCancelled={handleCancelled} />
+                <ReservationRow
+                  key={r.id}
+                  reservation={r}
+                  showWhen
+                  onCancelled={handleCancelled}
+                  onOpenCall={openCall}
+                />
               ))}
             </ul>
           </section>
         ))}
+
+      {call && <CallPanel conversationId={call} onClose={closeCall} />}
     </div>
   );
 }

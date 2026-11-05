@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
+import { SidePanel } from '@/components/SidePanel';
 import { useAvailability, useCreateReservation } from '@/features/reservations/queries';
 import { rejectionLabel } from '@/features/reservations/rejections';
 import type { Reservation } from '@/features/reservations/types';
@@ -31,7 +32,7 @@ function errorMessage(error: unknown): string {
 }
 
 export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
-  const titleId = useId();
+  const hintId = useId();
   const firstField = useRef<HTMLInputElement>(null);
 
   const [date, setDate] = useState(initialDate);
@@ -57,10 +58,7 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
 
   useEffect(() => {
     firstField.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -81,28 +79,7 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
   const canSubmit = startTime !== null && name.trim() !== '' && phone.trim() !== '';
 
   return (
-    <div className="fixed inset-0 z-20 flex justify-end">
-      <div className="absolute inset-0 bg-stone-900/30" onClick={onClose} aria-hidden />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto bg-white shadow-xl"
-      >
-        <header className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
-          <h2 id={titleId} className="text-lg font-semibold">
-            New booking
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md px-2 py-1 text-stone-500 hover:bg-stone-100"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </header>
-
+    <SidePanel title="New booking" onClose={onClose}>
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-5 px-5 py-5">
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm font-medium">
@@ -203,10 +180,10 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
                 rows={3}
                 maxLength={1000}
                 className="rounded-md border border-stone-300 px-3 py-2 font-normal"
-                aria-describedby={`${titleId}-notes-hint`}
+                aria-describedby={hintId}
               />
             </label>
-            <span id={`${titleId}-notes-hint`} className="text-stone-500">
+            <span id={hintId} className="text-stone-500">
               Start allergies with “Allergy:” so they're highlighted.
             </span>
           </div>
@@ -234,7 +211,6 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </SidePanel>
   );
 }

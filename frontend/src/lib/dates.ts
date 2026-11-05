@@ -69,3 +69,24 @@ export function formatLongDate(isoDate: string): string {
 export function formatTime(time: string): string {
   return time.slice(0, 5);
 }
+
+/** An ISO timestamp's wall-clock time in Lisbon: "2026-11-06T19:02:00Z" → "19:02". */
+export function formatLisbonClock(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: RESTAURANT_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(iso));
+}
+
+/** An ISO timestamp's calendar day in Lisbon, "YYYY-MM-DD". */
+export function lisbonDateOf(iso: string): string {
+  return todayInLisbon(new Date(iso));
+}
+
+/** 134 → "2:14" (minutes:seconds). */
+export function formatDuration(totalSecs: number): string {
+  const secs = Math.max(0, Math.round(totalSecs));
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}

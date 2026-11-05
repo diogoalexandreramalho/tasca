@@ -21,7 +21,8 @@ backend/src/
 backend/alembic/       # migrations
 frontend/src/
   app/                 # App, providers, routes
-  features/<name>/     # pages, hooks, types per feature
+  components/          # shared UI: SidePanel, DateNav
+  features/<name>/     # pages, hooks, types per feature (auth, reservations, calls)
   lib/                 # api.ts (request wrapper, ApiError), queryClient
 ```
 
@@ -64,6 +65,7 @@ Health check: `GET /api/v1/health`.
 - **Time**: store `timestamptz` in UTC; business rules (sittings, opening days) are in `Europe/Lisbon`.
 - **Booking rules** live in `services/booking_rules.py` as pure functions (`now` is passed in, never read from the clock) so they're unit-testable. Party-size-vs-table-capacity is enforced only there, not in the DB (a CHECK can't read another table).
 - **Frontend API**: always `request()` from `lib/api.ts`, never raw `fetch`. Query keys: `['resource', ...inputs]`.
+- **Page state in the URL**: `usePageParams()` keeps `date` (omitted when it's today in Lisbon) and `call` (the conversation id open in the call side panel) in the query string, so reloads and shared links restore them.
 - **Pre-commit**: `pre-commit install` once per clone. Keep the ruff hook `rev` in sync with ruff in `backend/uv.lock`. CI (`.github/workflows/ci.yml`) runs the full backend + frontend checks.
 
 ## Git workflow
