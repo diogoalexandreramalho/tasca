@@ -1,0 +1,11 @@
+# Netlify build for the customer website. In the Netlify site, set the base
+# directory to `website` (so this file is the one read) and VITE_API_URL, e.g.
+# https://tasca-api-pni4.onrender.com/api/v1. It's baked in at build time.
+
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+[build.environment]
+  # Match .nvmrc.
+  NODE_VERSION = "24"
