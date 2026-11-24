@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 
+import { useAuth } from '@/features/auth/AuthContext';
 import { useCancelReservation } from '@/features/reservations/queries';
 import type { Reservation } from '@/features/reservations/types';
 import { ApiError } from '@/lib/api';
@@ -35,7 +36,8 @@ export function ReservationRow({
   const allergy = hasAllergy(r.notes);
   const cancel = useCancelReservation();
   const [confirming, setConfirming] = useState(false);
-  const canCancel = !hasStarted(r.reservation_date, r.booking_slot.start_time);
+  const { isGuest } = useAuth();
+  const canCancel = !isGuest && !hasStarted(r.reservation_date, r.booking_slot.start_time);
 
   async function confirmCancel() {
     const cancelled = await cancel.mutateAsync(r.id).catch(() => null);

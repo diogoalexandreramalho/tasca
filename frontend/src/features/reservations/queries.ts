@@ -43,7 +43,8 @@ export function searchParamsFor(query: string): SearchBy | null {
   return /^[+\d\s().-]+$/.test(q) && digits.length >= 6 ? { phone: q } : { name: q };
 }
 
-export function useSearchReservations(query: string) {
+/** `allowPhone: false` for guests: the API refuses phone searches from them. */
+export function useSearchReservations(query: string, { allowPhone = true } = {}) {
   const params = searchParamsFor(query);
   return useQuery({
     queryKey: ['reservations', { search: params }],
@@ -53,7 +54,7 @@ export function useSearchReservations(query: string) {
       );
       return request<Reservation[]>(`/reservations?${qs}`);
     },
-    enabled: params !== null,
+    enabled: params !== null && (allowPhone || params.phone === undefined),
   });
 }
 

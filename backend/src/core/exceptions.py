@@ -33,6 +33,12 @@ class UnauthorizedError(AppException):
     message = "Authentication required."
 
 
+class ForbiddenError(AppException):
+    status_code = 403
+    code = "forbidden"
+    message = "You can't do this."
+
+
 class ConflictError(AppException):
     status_code = 409
     code = "conflict"

@@ -1,5 +1,6 @@
 import secrets
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -10,8 +11,8 @@ from jwt import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
-from core.exceptions import UnauthorizedError
-from core.security import decode_token
+from core.exceptions import ForbiddenError, UnauthorizedError
+from core.security import GUEST_SUBJECT, Role, decode_token
 from db.session import get_session
 
 DbSession = Annotated[AsyncSession, Depends(get_session)]
@@ -39,21 +40,41 @@ HttpClient = Annotated[httpx.AsyncClient, Depends(get_http_client)]
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
 
 
-def require_admin(token: Annotated[str | None, Depends(oauth2_scheme)]) -> str:
-    """Reject the request unless it carries a valid, unexpired admin token."""
+@dataclass(frozen=True)
+class Viewer:
+    """Who is looking at the dashboard: the admin, or a read-only guest (the demo)."""
+
+    role: Role
+
+    @property
+    def is_guest(self) -> bool:
+        return self.role == "guest"
+
+
+def require_viewer(token: Annotated[str | None, Depends(oauth2_scheme)]) -> Viewer:
+    """Reject the request unless it carries a valid, unexpired admin or guest token."""
     if token is None:
         raise UnauthorizedError()
     try:
-        subject = decode_token(token).get("sub")
+        claims = decode_token(token)
     except InvalidTokenError as exc:
         raise UnauthorizedError("Invalid or expired token.") from exc
-    admin_username = get_settings().admin_username
-    if subject != admin_username:
-        raise UnauthorizedError("Invalid or expired token.")
-    return admin_username
+    settings = get_settings()
+    subject, role = claims.get("sub"), claims.get("role", "admin")  # older tokens: admin
+    if role == "admin" and subject == settings.admin_username:
+        return Viewer(role="admin")
+    if role == "guest" and subject == GUEST_SUBJECT and settings.guest_access_enabled:
+        return Viewer(role="guest")
+    raise UnauthorizedError("Invalid or expired token.")
 
 
-CurrentAdmin = Annotated[str, Depends(require_admin)]
+CurrentViewer = Annotated[Viewer, Depends(require_viewer)]
+
+
+def require_admin(viewer: CurrentViewer) -> None:
+    """Changes are for the admin only: guests get 403 (they're logged in, just not allowed)."""
+    if viewer.is_guest:
+        raise ForbiddenError("The demo is read-only.")
 
 
 def require_agent(x_agent_secret: Annotated[str | None, Header()] = None) -> None:

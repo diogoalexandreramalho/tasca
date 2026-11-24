@@ -18,7 +18,7 @@ from sqlalchemy import create_engine, make_url, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from api.v1.deps import get_now
-from core.security import create_access_token
+from core.security import GUEST_SUBJECT, create_access_token
 from db.seed import seed
 from db.session import get_session
 from main import app
@@ -110,6 +110,19 @@ def api_client(anon_client: AsyncClient) -> AsyncClient:
     """Same as `anon_client`, logged in as the admin."""
     anon_client.headers["Authorization"] = f"Bearer {create_access_token(TEST_ADMIN_USERNAME)}"
     return anon_client
+
+
+@pytest.fixture
+async def guest_client(anon_client: AsyncClient) -> AsyncIterator[AsyncClient]:
+    """A read-only guest (the dashboard demo). A separate client, so a test can use it
+    alongside `api_client` (which sets the admin token on `anon_client`)."""
+    token = create_access_token(GUEST_SUBJECT, role="guest")
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": f"Bearer {token}"},
+    ) as c:
+        yield c
 
 
 @pytest.fixture

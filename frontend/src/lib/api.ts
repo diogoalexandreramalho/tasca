@@ -14,7 +14,10 @@ export class ApiError extends Error {
   }
 }
 
-type Session = { token: string; expiresAt: number };
+/** `guest`: the read-only demo ("Explore as a guest"); the API enforces it, the UI hides actions. */
+export type Role = 'admin' | 'guest';
+
+type Session = { token: string; expiresAt: number; role?: Role };
 
 /** The stored bearer token, or null if there is none or it has expired. */
 export function getToken(): string | null {
@@ -31,8 +34,13 @@ export function getSessionExpiry(): number | null {
   return readSession()?.expiresAt ?? null;
 }
 
-export function saveSession(token: string, expiresInSeconds: number): void {
-  const session: Session = { token, expiresAt: Date.now() + expiresInSeconds * 1000 };
+/** The stored session's role (sessions saved before roles existed are the admin's). */
+export function getSessionRole(): Role {
+  return readSession()?.role ?? 'admin';
+}
+
+export function saveSession(token: string, expiresInSeconds: number, role: Role = 'admin'): void {
+  const session: Session = { token, expiresAt: Date.now() + expiresInSeconds * 1000, role };
   try {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   } catch {

@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 12 * 60  # one working day
 
+    # "Explore as a guest" on the dashboard's login page: a read-only session with
+    # phone numbers masked, for portfolio reviewers. Set to false to turn it off
+    # (guest logins are refused and existing guest tokens stop working).
+    guest_access_enabled: bool = True
+
     # Shared secret the voice agent (ElevenLabs) sends in the X-Agent-Secret header.
     # Optional so the app still starts without it; while unset, every /agent route
     # answers 401. Generate with `openssl rand -hex 32`.
