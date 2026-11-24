@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
+import { useAuth } from '@/features/auth/AuthContext';
 import { CallPanel } from '@/features/calls/CallPanel';
 import { Flash, describeBooking } from '@/features/reservations/Flash';
 import { searchParamsFor, useSearchReservations } from '@/features/reservations/queries';
@@ -12,7 +13,9 @@ export function SearchPage() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
   const by = searchParamsFor(query);
-  const results = useSearchReservations(query);
+  const { isGuest } = useAuth();
+  const phoneNotAllowed = isGuest && by?.phone !== undefined;
+  const results = useSearchReservations(query, { allowPhone: !isGuest });
   const [flash, setFlash] = useState<string | null>(null);
   const { call, openCall, closeCall } = usePageParams();
 
@@ -39,9 +42,20 @@ export function SearchPage() {
       {flash && <Flash message={flash} onDismiss={() => setFlash(null)} />}
 
       {!by && (
-        <p className="text-sm text-stone-600">Type a name or a phone number in the search box.</p>
+        <p className="text-sm text-stone-600">
+          {isGuest
+            ? 'Type a name in the search box.'
+            : 'Type a name or a phone number in the search box.'}
+        </p>
       )}
-      {by && results.isPending && <p className="text-sm text-stone-500">Searching…</p>}
+      {phoneNotAllowed && (
+        <p className="text-sm text-stone-600">
+          Searching by phone isn’t available in the demo. Search by name instead.
+        </p>
+      )}
+      {by && !phoneNotAllowed && results.isPending && (
+        <p className="text-sm text-stone-500">Searching…</p>
+      )}
       {results.error && (
         <p role="alert" className="text-sm text-red-600">
           {results.error.message}

@@ -4,7 +4,8 @@ from typing import Literal
 
 from fastapi import APIRouter
 
-from api.v1.deps import DbSession
+from api.v1.deps import CurrentViewer, DbSession, Viewer
+from core.privacy import mask_phone_numbers
 from models import Reservation
 from schemas.call import CallBooking, CallDetail, CallRead, TranscriptLine
 from services import calls
@@ -30,42 +31,53 @@ def _bookings(c: CallWithBookings) -> list[CallBooking]:
     ]
 
 
-def _read(c: CallWithBookings) -> CallRead:
+def _read(c: CallWithBookings, viewer: Viewer) -> CallRead:
+    summary = c.call.summary
+    if summary is not None and viewer.is_guest:
+        summary = mask_phone_numbers(summary)
     return CallRead(
         id=c.call.id,
         conversation_id=c.call.conversation_id,
         started_at=c.call.started_at,
         duration_secs=c.call.duration_secs,
         outcome=c.call.outcome,
-        summary=c.call.summary,
+        summary=summary,
         bookings=_bookings(c),
     )
 
 
 @router.get("", response_model=list[CallRead])
-async def list_calls(session: DbSession, date: dt.date | None = None) -> list[CallRead]:
+async def list_calls(
+    session: DbSession, viewer: CurrentViewer, date: dt.date | None = None
+) -> list[CallRead]:
     """Calls that started on `date` (Lisbon), or the 50 most recent; newest first.
 
     No transcripts here (lighter, and less personal data on screen): open one call.
     """
-    return [_read(c) for c in await calls.list_calls(session, day=date)]
+    return [_read(c, viewer) for c in await calls.list_calls(session, day=date)]
 
 
 @router.get("/{call_id}", response_model=CallDetail)
-async def get_call(session: DbSession, call_id: uuid.UUID) -> CallDetail:
-    return _detail(await calls.get_call(session, call_id=call_id))
+async def get_call(session: DbSession, viewer: CurrentViewer, call_id: uuid.UUID) -> CallDetail:
+    return _detail(await calls.get_call(session, call_id=call_id), viewer)
 
 
 @router.get("/by-conversation/{conversation_id}", response_model=CallDetail)
-async def get_call_by_conversation(session: DbSession, conversation_id: str) -> CallDetail:
+async def get_call_by_conversation(
+    session: DbSession, viewer: CurrentViewer, conversation_id: str
+) -> CallDetail:
     """Open a booking's call: bookings store the ElevenLabs conversation id."""
-    return _detail(await calls.get_call_by_conversation(session, conversation_id=conversation_id))
+    call = await calls.get_call_by_conversation(session, conversation_id=conversation_id)
+    return _detail(call, viewer)
 
 
-def _detail(c: CallWithBookings) -> CallDetail:
+def _detail(c: CallWithBookings, viewer: Viewer) -> CallDetail:
     transcript = (
         [TranscriptLine.model_validate(line) for line in c.call.transcript]
         if c.call.transcript is not None
         else None
     )
-    return CallDetail(**_read(c).model_dump(), transcript=transcript)
+    if transcript is not None and viewer.is_guest:
+        for line in transcript:
+            line.message = mask_phone_numbers(line.message)
+    return CallDetail(**_read(c, viewer).model_dump(), transcript=transcript)

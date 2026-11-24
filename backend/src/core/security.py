@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import jwt
 from pwdlib import PasswordHash
@@ -17,12 +17,18 @@ def verify_password(plain: str, hashed: str) -> bool:
     return _password_hash.verify(plain, hashed)
 
 
-def create_access_token(subject: str, *, expires_delta: timedelta | None = None) -> str:
+Role = Literal["admin", "guest"]
+GUEST_SUBJECT = "guest"
+
+
+def create_access_token(
+    subject: str, *, role: Role = "admin", expires_delta: timedelta | None = None
+) -> str:
     settings = get_settings()
     expire = datetime.now(UTC) + (
         expires_delta or timedelta(minutes=settings.jwt_access_token_expire_minutes)
     )
-    payload: dict[str, Any] = {"sub": subject, "exp": expire}
+    payload: dict[str, Any] = {"sub": subject, "role": role, "exp": expire}
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { DateNav } from '@/components/DateNav';
+import { useAuth } from '@/features/auth/AuthContext';
 import { CallPanel } from '@/features/calls/CallPanel';
 import { Flash, describeBooking } from '@/features/reservations/Flash';
 import { NewBookingPanel } from '@/features/reservations/NewBookingPanel';
@@ -20,6 +21,7 @@ function summary(reservations: Reservation[]): string {
 
 export function DayViewPage() {
   const { date, today, call, goToDate, openCall, closeCall } = usePageParams();
+  const { isGuest } = useAuth();
 
   const slots = useSlots();
   const reservations = useDayReservations(date);
@@ -42,7 +44,8 @@ export function DayViewPage() {
   return (
     <div className="flex flex-col gap-6">
       <DateNav date={date} today={today} onChange={goToDate}>
-        <button
+        {!isGuest && (
+          <button
           type="button"
           onClick={() => {
             setFlash(null);
@@ -51,12 +54,13 @@ export function DayViewPage() {
           className="whitespace-nowrap rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700"
         >
           + New booking
-        </button>
+          </button>
+        )}
       </DateNav>
 
       {flash && <Flash message={flash} onDismiss={() => setFlash(null)} />}
 
-      {panelOpen && (
+      {panelOpen && !isGuest && (
         <NewBookingPanel
           initialDate={date}
           onClose={() => setPanelOpen(false)}

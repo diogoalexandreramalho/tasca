@@ -15,3 +15,10 @@ async def login(form: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
     """OAuth2 password flow: form fields `username` and `password`."""
     token = auth.login(username=form.username, password=form.password)
     return Token(access_token=token, expires_in=get_settings().jwt_access_token_expire_minutes * 60)
+
+
+@router.post("/guest", response_model=Token)
+async def guest_login() -> Token:
+    """A read-only session for the demo: no password, no changes, phone numbers masked."""
+    token = auth.guest_login()
+    return Token(access_token=token, expires_in=get_settings().jwt_access_token_expire_minutes * 60)

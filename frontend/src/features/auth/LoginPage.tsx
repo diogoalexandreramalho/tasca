@@ -5,7 +5,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { ApiError } from '@/lib/api';
 
 export function LoginPage() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, loginAsGuest } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/';
@@ -14,8 +14,22 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEnteringAsGuest, setIsEnteringAsGuest] = useState(false);
 
   if (isAuthenticated) return <Navigate to={from} replace />;
+
+  async function handleGuest() {
+    setError(null);
+    setIsEnteringAsGuest(true);
+    try {
+      await loginAsGuest();
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not reach the server.');
+    } finally {
+      setIsEnteringAsGuest(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -72,6 +86,23 @@ export function LoginPage() {
           {isSubmitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
+
+      <div className="my-6 flex items-center gap-3 text-xs text-stone-400" aria-hidden>
+        <span className="h-px flex-1 bg-stone-200" />
+        or
+        <span className="h-px flex-1 bg-stone-200" />
+      </div>
+      <button
+        type="button"
+        onClick={handleGuest}
+        disabled={isEnteringAsGuest}
+        className="w-full rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100 disabled:opacity-50"
+      >
+        {isEnteringAsGuest ? 'Opening the demo…' : 'Explore as a guest'}
+      </button>
+      <p className="mt-2 text-center text-xs text-stone-500">
+        Read-only demo: browse bookings and calls. Phone numbers are hidden.
+      </p>
     </section>
   );
 }

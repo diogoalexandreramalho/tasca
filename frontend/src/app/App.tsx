@@ -5,7 +5,7 @@ import { AppRoutes } from '@/app/routes';
 import { useAuth } from '@/features/auth/AuthContext';
 
 export function App() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isGuest, logout } = useAuth();
 
   return (
     <div className="min-h-screen">
@@ -13,7 +13,13 @@ export function App() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-2 gap-y-3 px-4 py-4 sm:gap-x-4 sm:px-6">
           <Link to="/" className="mr-auto">
             <span className="text-lg font-semibold tracking-tight">Tasca Tagarela</span>
-            <span className="ml-2 hidden text-sm text-stone-500 sm:inline">admin</span>
+            {isGuest ? (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                Guest · read-only
+              </span>
+            ) : (
+              <span className="ml-2 hidden text-sm text-stone-500 sm:inline">admin</span>
+            )}
           </Link>
           {isAuthenticated && (
             <>
@@ -34,13 +40,13 @@ export function App() {
                   </NavLink>
                 ))}
               </nav>
-              <SearchBox />
+              <SearchBox byNameOnly={isGuest} />
               <button
                 type="button"
                 onClick={logout}
                 className="rounded-md border border-stone-300 px-2.5 py-1.5 text-sm hover:bg-stone-100 sm:px-3"
               >
-                Log out
+                {isGuest ? 'Leave demo' : 'Log out'}
               </button>
             </>
           )}
@@ -53,7 +59,7 @@ export function App() {
   );
 }
 
-function SearchBox() {
+function SearchBox({ byNameOnly }: { byNameOnly: boolean }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
 
@@ -68,8 +74,8 @@ function SearchBox() {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search name or phone"
-        aria-label="Search bookings by name or phone"
+        placeholder={byNameOnly ? 'Search by name' : 'Search name or phone'}
+        aria-label={byNameOnly ? 'Search bookings by name' : 'Search bookings by name or phone'}
         className="w-full rounded-md border border-stone-300 px-3 py-1.5 text-sm"
       />
     </form>

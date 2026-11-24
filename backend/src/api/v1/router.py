@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from api.v1.deps import require_admin, require_agent
+from api.v1.deps import require_agent, require_viewer
 from api.v1.endpoints import (
     agent,
     auth,
@@ -29,12 +29,14 @@ api_router.include_router(webhooks.router)
 # (conversations per day, max duration) are the agent's call limits in ElevenLabs.
 api_router.include_router(voice.router)
 
-# Admin only: every route below needs a valid bearer token.
-admin = [Depends(require_admin)]
-api_router.include_router(restaurant.router, dependencies=admin)
-api_router.include_router(availability.router, dependencies=admin)
-api_router.include_router(reservations.router, dependencies=admin)
-api_router.include_router(calls.router, dependencies=admin)
+# Dashboard: every route below needs a bearer token, the admin's or a read-only
+# guest's. Routes that change data add `require_admin` themselves (guests get 403),
+# and guests see phone numbers masked (core/privacy.py).
+dashboard = [Depends(require_viewer)]
+api_router.include_router(restaurant.router, dependencies=dashboard)
+api_router.include_router(availability.router, dependencies=dashboard)
+api_router.include_router(reservations.router, dependencies=dashboard)
+api_router.include_router(calls.router, dependencies=dashboard)
 
 # Voice agent only: every /agent route needs the X-Agent-Secret header.
 api_router.include_router(agent.router, dependencies=[Depends(require_agent)])
