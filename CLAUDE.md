@@ -1,11 +1,10 @@
 # Tasca
 
-Phone voice agent for a fictional Lisbon restaurant (Tasca Tagarela), plus an admin dashboard. The agent handles bookings only (check, book, find, cancel) and must never invent facts; it speaks English. Its prompt, voice and tool definitions are configured in the ElevenLabs dashboard. Code, docs and commits are in English. Deployed: Netlify (dashboard) → Render (API) → Neon (Postgres), configured in each provider's dashboard.
+Voice agent for a fictional Lisbon restaurant (Tasca Tagarela), plus an admin dashboard. The agent handles bookings only (check, book, find, cancel) and must never invent facts; it speaks English. Its prompt, voice and tool definitions are configured in the ElevenLabs dashboard. Code, docs and commits are in English. Deployed: Netlify (dashboard) → Render (API) → Neon (Postgres), configured in each provider's dashboard.
 
 ## Stack
 
-- **Voice**: ElevenLabs Agents (STT/LLM/TTS) with native Twilio integration. ElevenLabs calls our backend as webhook tools.
-- **SMS**: Twilio (alphanumeric sender ID).
+- **Voice**: ElevenLabs Agents (STT/LLM/TTS). Customers talk to it from the browser (WebRTC), not a phone number. ElevenLabs calls our backend as webhook tools.
 - **Backend**: FastAPI, async SQLAlchemy 2, Alembic, Postgres 16. `uv`, `ruff`, `mypy --strict`.
 - **Frontend** (admin dashboard): React + TS + Vite, TanStack Query, Tailwind.
 
@@ -62,6 +61,7 @@ Health check: `GET /api/v1/health`.
 - **Layering**: endpoint → service → repository → model. Services commit; repositories don't.
 - **Agent tools** (`api/v1/endpoints/agent.py`, schemas in `schemas/agent.py`): protected by the `X-Agent-Secret` header (`AGENT_API_SECRET`, optional; unset = every `/agent` route is 401). Reuse the dashboard's services; reply with only the facts the model needs next (no wording, no other customers' data, no table numbers). Business outcomes are HTTP 200: read tools return an empty list (+ `reason`/`field`), write tools a `status`. Inputs the model may get wrong (time, ids) are strings so they come back as `invalid`/`not_found`, not 422. Find and cancel require the booking's phone; cancel answers `not_found` for someone else's booking.
 - **Call log**: ElevenLabs' post-call webhook (`POST /api/v1/webhooks/elevenlabs/post-call`) is public but verified by its `ElevenLabs-Signature` HMAC (`ELEVENLABS_WEBHOOK_SECRET`, `core/webhooks.py`) against the raw body, before parsing. One `calls` row per conversation (upsert, so redeliveries update). Outcome comes from our DB (reservations' `created_in/cancelled_in_conversation_id`, filled by the agent tools from `system__conversation_id`), not ElevenLabs' judgement. Transcripts/summaries are cleared after `CALL_TRANSCRIPT_RETENTION_DAYS` (90) whenever a call is recorded.
+- **Voice session**: the agent is private (authentication on in ElevenLabs). `POST /api/v1/voice/session` is public and returns only a short-lived WebRTC `{token}`, fetched with `ELEVENLABS_API_KEY` (ElevenAgents access only) for `ELEVENLABS_AGENT_ID`; any failure is a 503 `service_unavailable`. No rate limiting of our own: conversations per day and max duration are the agent's call limits in ElevenLabs. Outgoing HTTP goes through the `HttpClient` dependency so tests fake it with `httpx.MockTransport`.
 - **Time**: store `timestamptz` in UTC; business rules (sittings, opening days) are in `Europe/Lisbon`.
 - **Booking rules** live in `services/booking_rules.py` as pure functions (`now` is passed in, never read from the clock) so they're unit-testable. Party-size-vs-table-capacity is enforced only there, not in the DB (a CHECK can't read another table).
 - **Frontend API**: always `request()` from `lib/api.ts`, never raw `fetch`. Query keys: `['resource', ...inputs]`.

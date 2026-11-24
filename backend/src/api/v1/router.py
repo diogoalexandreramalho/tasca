@@ -8,6 +8,7 @@ from api.v1.endpoints import (
     calls,
     reservations,
     restaurant,
+    voice,
     webhooks,
 )
 
@@ -24,6 +25,9 @@ async def health() -> dict[str, str]:
 api_router.include_router(auth.router)
 # No login: every webhook is verified by its ElevenLabs signature instead.
 api_router.include_router(webhooks.router)
+# No login: hands the website a short-lived ElevenLabs token. Its abuse limits
+# (conversations per day, max duration) are the agent's call limits in ElevenLabs.
+api_router.include_router(voice.router)
 
 # Admin only: every route below needs a valid bearer token.
 admin = [Depends(require_admin)]
