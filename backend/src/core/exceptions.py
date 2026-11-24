@@ -45,6 +45,14 @@ class ValidationAppError(AppException):
     message = "Invalid input."
 
 
+class ServiceUnavailableError(AppException):
+    """Something we depend on (e.g. ElevenLabs) is missing, down or refusing us."""
+
+    status_code = 503
+    code = "service_unavailable"
+    message = "This service is unavailable right now. Please try again later."
+
+
 class BookingRejectedError(AppException):
     """A booking request broke a rule or nothing was free. `details["reason"]` says which."""
 

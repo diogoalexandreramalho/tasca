@@ -1,7 +1,9 @@
 import secrets
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Annotated
 
+import httpx
 from fastapi import Depends, Header
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
@@ -21,6 +23,15 @@ def get_now() -> datetime:
 
 
 Now = Annotated[datetime, Depends(get_now)]
+
+
+async def get_http_client() -> AsyncIterator[httpx.AsyncClient]:
+    """HTTP client for calls to other services. A dependency so tests can fake them."""
+    async with httpx.AsyncClient(timeout=10) as client:
+        yield client
+
+
+HttpClient = Annotated[httpx.AsyncClient, Depends(get_http_client)]
 
 
 # auto_error=False so a missing token goes through our UnauthorizedError (standard

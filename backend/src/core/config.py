@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     # its ElevenLabs-Signature header. Optional; while unset, every webhook is 401.
     elevenlabs_webhook_secret: str | None = None
 
+    # For the website's "Talk to Tasca" button: our API exchanges these for a
+    # short-lived conversation token, so the agent can stay private (authentication
+    # on in ElevenLabs). Give the key access to ElevenAgents only. Optional; while
+    # either is unset, POST /voice/session answers 503.
+    elevenlabs_api_key: str | None = None
+    elevenlabs_agent_id: str | None = None
+    elevenlabs_api_url: str = "https://api.elevenlabs.io"
+
     # Transcripts and summaries contain personal data; cleared after this many days.
     call_transcript_retention_days: int = 90
 

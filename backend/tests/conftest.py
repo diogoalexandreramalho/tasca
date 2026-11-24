@@ -10,8 +10,14 @@ TEST_ADMIN_USERNAME = "admin"
 TEST_ADMIN_PASSWORD = "correct-horse-battery"
 TEST_AGENT_SECRET = "test-agent-secret-that-is-at-least-32-chars"
 TEST_WEBHOOK_SECRET = "wsec_test_webhook_secret"
+TEST_ELEVENLABS_API_KEY = "test-elevenlabs-api-key"
+TEST_ELEVENLABS_AGENT_ID = "agent_test"
 os.environ["AGENT_API_SECRET"] = TEST_AGENT_SECRET
 os.environ["ELEVENLABS_WEBHOOK_SECRET"] = TEST_WEBHOOK_SECRET
+os.environ["ELEVENLABS_API_KEY"] = TEST_ELEVENLABS_API_KEY
+os.environ["ELEVENLABS_AGENT_ID"] = TEST_ELEVENLABS_AGENT_ID
+# Tests never reach the real ElevenLabs: they fake it (see test_api_voice.py).
+os.environ["ELEVENLABS_API_URL"] = "https://elevenlabs.test"
 os.environ["JWT_SECRET_KEY"] = "test-secret-key-that-is-at-least-32-chars"
 os.environ["ADMIN_USERNAME"] = TEST_ADMIN_USERNAME
 os.environ["ADMIN_PASSWORD_HASH"] = PasswordHash.recommended().hash(TEST_ADMIN_PASSWORD)
