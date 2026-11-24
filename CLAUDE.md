@@ -1,12 +1,13 @@
 # Tasca
 
-Voice agent for a fictional Lisbon restaurant (Tasca Tagarela), plus an admin dashboard. The agent handles bookings only (check, book, find, cancel) and must never invent facts; it speaks English. Its prompt, voice and tool definitions are configured in the ElevenLabs dashboard. Code, docs and commits are in English. Deployed: Netlify (dashboard) → Render (API) → Neon (Postgres), configured in each provider's dashboard.
+Voice agent for a fictional Lisbon restaurant (Tasca Tagarela): a customer website where people book by talking to the agent, plus an admin dashboard for the restaurant. The agent handles bookings only (check, book, find, cancel) and must never invent facts; it speaks English. Its prompt, voice and tool definitions are configured in the ElevenLabs dashboard. Code, docs and commits are in English. Deployed: Netlify (website and dashboard, two sites) → Render (API) → Neon (Postgres), configured in each provider's dashboard.
 
 ## Stack
 
 - **Voice**: ElevenLabs Agents (STT/LLM/TTS). Customers talk to it from the browser (WebRTC), not a phone number. ElevenLabs calls our backend as webhook tools.
 - **Backend**: FastAPI, async SQLAlchemy 2, Alembic, Postgres 16. `uv`, `ruff`, `mypy --strict`.
 - **Frontend** (admin dashboard): React + TS + Vite, TanStack Query, Tailwind.
+- **Website** (customers): React + TS + Vite, Tailwind, `@elevenlabs/react` (pinned). One page, no router.
 
 ## Layout
 
@@ -23,6 +24,10 @@ frontend/src/
   components/          # shared UI: SidePanel, DateNav
   features/<name>/     # pages, hooks, types per feature (auth, reservations, calls)
   lib/                 # api.ts (request wrapper, ApiError), queryClient
+website/src/
+  App.tsx              # the page
+  features/call/       # Talk to Tasca: useTascaCall (mic → token → WebRTC), CallBox (states)
+  lib/api.ts           # createVoiceSession()
 ```
 
 Backend imports are absolute from `src/`: `from core.config import ...` — `src/` is on `sys.path` via pytest `pythonpath`, alembic `prepend_sys_path` and uvicorn `--app-dir`.
@@ -48,6 +53,12 @@ npm run dev
 npm run typecheck
 npm test
 
+# Website (Node 24; http://localhost:5175)
+cd website && npm install
+npm run dev
+npm run typecheck
+npm test
+
 # Full stack
 docker compose up --build
 ```
@@ -66,12 +77,13 @@ Health check: `GET /api/v1/health`.
 - **Booking rules** live in `services/booking_rules.py` as pure functions (`now` is passed in, never read from the clock) so they're unit-testable. Party-size-vs-table-capacity is enforced only there, not in the DB (a CHECK can't read another table).
 - **Frontend API**: always `request()` from `lib/api.ts`, never raw `fetch`. Query keys: `['resource', ...inputs]`.
 - **Page state in the URL**: `usePageParams()` keeps `date` (omitted when it's today in Lisbon) and `call` (the conversation id open in the call side panel) in the query string, so reloads and shared links restore them.
-- **Pre-commit**: `pre-commit install` once per clone. Keep the ruff hook `rev` in sync with ruff in `backend/uv.lock`. CI (`.github/workflows/ci.yml`) runs the full backend + frontend checks.
+- **Website call**: `useTascaCall` asks for the mic first (a blocked mic gets its own message), then `POST /voice/session`, then `startSession({conversationToken, connectionType: 'webrtc'})`. API 503 → "unavailable"; unreachable API or a broken connection → "failed". The SDK is ~630 kB, so `CallSection` is lazy-loaded and the page shows the same `TalkButton` meanwhile. Opening hours on the page are written by hand: keep them in sync with `booking_rules.py` and the agent prompt.
+- **Pre-commit**: `pre-commit install` once per clone. Keep the ruff hook `rev` in sync with ruff in `backend/uv.lock`. CI (`.github/workflows/ci.yml`) runs the full backend, frontend and website checks.
 
 ## Git workflow
 
 - Short-lived branches off `main`, named `<type>/<slug>` (e.g. `feat/booking-core`).
-- Commits: `<type>(<scope>): <imperative summary>`. Types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`. Scopes: `api`, `db`, `agent`, `sms`, `frontend`, `tests`, `ci`, `deps`.
+- Commits: `<type>(<scope>): <imperative summary>`. Types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`. Scopes: `api`, `db`, `agent`, `frontend`, `website`, `tests`, `ci`, `deps`.
 - No direct pushes to `main`; open a PR and squash-merge. PR body: Summary / Test plan / Notes.
 
 ## Tests

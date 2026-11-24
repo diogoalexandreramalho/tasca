@@ -32,3 +32,10 @@ repos:
         entry: bash -c 'cd frontend && npm run typecheck'
         files: ^frontend/
         pass_filenames: false
+
+      - id: website-typecheck
+        name: website typecheck
+        language: system
+        entry: bash -c 'cd website && npm run typecheck'
+        files: ^website/
+        pass_filenames: false

@@ -26,7 +26,11 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://tasca:tasca@localhost:5432/tasca"
     sync_database_url: str = "postgresql+psycopg://tasca:tasca@localhost:5432/tasca"
 
-    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
+    # Browsers allowed to call the API: the admin dashboard and the customer website.
+    cors_origins: Annotated[list[str], NoDecode] = [
+        "http://localhost:5173",
+        "http://localhost:5175",
+    ]
 
     # Single admin account, configured here rather than in the DB. Generate the
     # hash with `PYTHONPATH=src uv run python -m core.hash_password`.
