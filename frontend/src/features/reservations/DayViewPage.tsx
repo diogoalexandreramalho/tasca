@@ -46,14 +46,14 @@ export function DayViewPage() {
       <DateNav date={date} today={today} onChange={goToDate}>
         {!isGuest && (
           <button
-          type="button"
-          onClick={() => {
-            setFlash(null);
-            setPanelOpen(true);
-          }}
-          className="whitespace-nowrap rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700"
-        >
-          + New booking
+            type="button"
+            onClick={() => {
+              setFlash(null);
+              setPanelOpen(true);
+            }}
+            className="h-11 whitespace-nowrap rounded-md bg-azulejo-600 px-4 text-sm sm:h-auto sm:px-3 sm:py-1.5 font-medium text-white hover:bg-azulejo-800"
+          >
+            + New booking
           </button>
         )}
       </DateNav>

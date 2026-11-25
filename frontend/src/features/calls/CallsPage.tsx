@@ -2,9 +2,9 @@ import { Link } from 'react-router';
 
 import { DateNav } from '@/components/DateNav';
 import { CallPanel } from '@/features/calls/CallPanel';
-import { OutcomeBadge } from '@/features/calls/OutcomeBadge';
+import { OUTCOME_LABEL, OutcomeBadge } from '@/features/calls/OutcomeBadge';
 import { useCalls } from '@/features/calls/queries';
-import type { Call } from '@/features/calls/types';
+import type { Call, CallOutcome } from '@/features/calls/types';
 import { plural } from '@/features/reservations/ReservationRow';
 import { formatDuration, formatLisbonClock, formatShortDate, formatTime } from '@/lib/dates';
 import { usePageParams } from '@/lib/usePageParams';
@@ -31,7 +31,7 @@ export function CallsPage() {
         ) : (
           <section aria-label="Calls" className="rounded-lg border border-stone-200 bg-white">
             <header className="border-b border-stone-200 px-4 py-3 text-sm text-stone-500">
-              {plural(calls.data.length, 'call')}
+              {daySummary(calls.data)}
             </header>
             <ul className="divide-y divide-stone-100">
               {calls.data.map((c) => (
@@ -65,7 +65,7 @@ function CallRow({ call: c, onOpen }: { call: Call; onOpen: () => void }) {
         </span>
       </button>
       {c.bookings.length > 0 && (
-        <ul className="mt-1 flex flex-col gap-0.5 sm:pl-[12.75rem]">
+        <ul className="mt-1 flex flex-col gap-0.5 sm:pl-[14.25rem]">
           {c.bookings.map((b) => (
             <li key={`${b.action}-${b.id}`}>
               <Link
@@ -82,4 +82,14 @@ function CallRow({ call: c, onOpen }: { call: Call; onOpen: () => void }) {
       )}
     </li>
   );
+}
+
+const OUTCOME_ORDER: CallOutcome[] = ['booked', 'cancelled', 'enquiry', 'no_action'];
+
+/** "4 calls · 1 booked · 1 cancelled · 1 question · 1 other" (outcomes with none are left out). */
+function daySummary(calls: Call[]): string {
+  const counts = OUTCOME_ORDER.map((o) => [o, calls.filter((c) => c.outcome === o).length] as const)
+    .filter(([, n]) => n > 0)
+    .map(([o, n]) => `${n} ${OUTCOME_LABEL[o]}`);
+  return [plural(calls.length, 'call'), ...counts].join(' · ');
 }

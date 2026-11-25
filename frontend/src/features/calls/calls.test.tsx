@@ -60,7 +60,7 @@ describe('CallsPage', () => {
     renderApp('/calls?date=2026-11-06');
 
     const list = await screen.findByRole('region', { name: 'Calls' });
-    expect(within(list).getByText('2 calls')).toBeInTheDocument();
+    expect(within(list).getByText('2 calls · 1 booked · 1 question')).toBeInTheDocument();
     const first = within(list).getByRole('button', { name: 'Open the call at 19:02' });
     expect(first).toHaveTextContent('2:14');
     expect(first).toHaveTextContent('Booked');
@@ -70,7 +70,7 @@ describe('CallsPage', () => {
       '/?date=2026-11-13',
     );
     expect(within(list).getByRole('button', { name: 'Open the call at 18:10' })).toHaveTextContent(
-      'Enquiry',
+      'Question',
     );
     const url = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(url.searchParams.get('date')).toBe('2026-11-06');
