@@ -112,6 +112,31 @@ describe('NewBookingPanel', () => {
     expect(sizes).toEqual(['2', '8']);
   });
 
+  it('says what is missing instead of booking, and clears each hint once filled', async () => {
+    const fetchMock = mockApi({
+      'GET /slots': () => json(200, SLOTS),
+      'GET /reservations': () => json(200, []),
+      'GET /availability': () => json(200, availability([null, null, null, null])),
+    });
+    renderApp(`/?date=${FRIDAY}`);
+    const dialog = await openPanel();
+    await within(dialog).findByRole('radio', { name: /^20:30/ });
+    fill(dialog, 'Name', 'Ana Silva');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Book' }));
+
+    expect(within(dialog).getByText('Choose a sitting')).toBeInTheDocument();
+    expect(within(dialog).getByText('Enter a phone number')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Enter a name')).not.toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Phone')).toHaveAttribute('aria-invalid', 'true');
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+
+    fireEvent.click(within(dialog).getByRole('radio', { name: /^20:30/ }));
+    fill(dialog, 'Phone', '912 345 678');
+    expect(within(dialog).queryByText('Choose a sitting')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Enter a phone number')).not.toBeInTheDocument();
+  });
+
   it('explains a closed day once instead of per sitting', async () => {
     mockApi({
       'GET /slots': () => json(200, SLOTS),
@@ -123,7 +148,9 @@ describe('NewBookingPanel', () => {
 
     expect(await within(dialog).findByText('Closed on Mondays')).toBeInTheDocument();
     expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Book' })).toBeDisabled();
+    // Book stays clickable but books nothing (and doesn't ask to choose a sitting).
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Book' }));
+    expect(within(dialog).queryByText('Choose a sitting')).not.toBeInTheDocument();
   });
 
   it('keeps the panel open and explains when the server rejects the booking', async () => {

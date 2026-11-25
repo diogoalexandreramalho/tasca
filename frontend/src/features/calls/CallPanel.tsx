@@ -118,7 +118,7 @@ function TranscriptBubble({ line }: { line: TranscriptLine }) {
       </span>
       <span
         className={`max-w-[85%] rounded-lg px-3 py-2 ${
-          isAgent ? 'bg-stone-100 text-stone-900' : 'bg-stone-900 text-white'
+          isAgent ? 'bg-stone-100 text-stone-900' : 'bg-azulejo-800 text-white'
         }`}
       >
         {line.message}

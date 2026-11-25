@@ -33,6 +33,8 @@ function errorMessage(error: unknown): string {
 
 export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
   const hintId = useId();
+  const nameHintId = useId();
+  const phoneHintId = useId();
   const firstField = useRef<HTMLInputElement>(null);
 
   const [date, setDate] = useState(initialDate);
@@ -41,6 +43,8 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
+  // After a submit with gaps: show what's missing next to each field.
+  const [showMissing, setShowMissing] = useState(false);
 
   const availability = useAvailability(date, partySize, isIsoDate(date));
   const create = useCreateReservation();
@@ -60,9 +64,18 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
     firstField.current?.focus();
   }, []);
 
+  const missing = {
+    sitting: startTime === null,
+    name: name.trim() === '',
+    phone: phone.trim() === '',
+  };
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!startTime) return;
+    if (startTime === null || missing.name || missing.phone) {
+      setShowMissing(true);
+      return;
+    }
     const reservation = await create
       .mutateAsync({
         reservation_date: date,
@@ -76,11 +89,10 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
     if (reservation) onCreated(reservation);
   }
 
-  const canSubmit = startTime !== null && name.trim() !== '' && phone.trim() !== '';
 
   return (
     <SidePanel title="New booking" onClose={onClose}>
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-5 px-5 py-5">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-1 flex-col gap-5 px-5 py-5">
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm font-medium">
               Date
@@ -129,7 +141,7 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
                   key={s.start_time}
                   className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm ${
                     s.available
-                      ? 'cursor-pointer border-stone-300 hover:bg-stone-50 has-[:checked]:border-stone-900 has-[:checked]:bg-stone-50'
+                      ? 'cursor-pointer border-stone-300 hover:bg-stone-50 has-[:checked]:border-azulejo-600 has-[:checked]:bg-azulejo-50'
                       : 'cursor-not-allowed border-stone-200 text-stone-400'
                   }`}
                 >
@@ -148,29 +160,44 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
                 </label>
               ))
             )}
+            {showMissing && missing.sitting && !sameReasonEverywhere && (
+              <FieldHint>Choose a sitting</FieldHint>
+            )}
           </fieldset>
 
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Name
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="rounded-md border border-stone-300 px-3 py-2 font-normal"
-              maxLength={120}
-              required
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Phone
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="912 345 678"
-              className="rounded-md border border-stone-300 px-3 py-2 font-normal"
-              required
-            />
-          </label>
+          <div className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Name
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={fieldClass(showMissing && missing.name)}
+                maxLength={120}
+                required
+                aria-invalid={showMissing && missing.name}
+                aria-describedby={showMissing && missing.name ? nameHintId : undefined}
+              />
+            </label>
+            {showMissing && missing.name && <FieldHint id={nameHintId}>Enter a name</FieldHint>}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Phone
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="912 345 678"
+                className={fieldClass(showMissing && missing.phone)}
+                required
+                aria-invalid={showMissing && missing.phone}
+                aria-describedby={showMissing && missing.phone ? phoneHintId : undefined}
+              />
+            </label>
+            {showMissing && missing.phone && (
+              <FieldHint id={phoneHintId}>Enter a phone number</FieldHint>
+            )}
+          </div>
           <div className="flex flex-col gap-1 text-sm">
             <label className="flex flex-col gap-1 font-medium">
               Notes
@@ -204,13 +231,25 @@ export function NewBookingPanel({ initialDate, onClose, onCreated }: Props) {
             </button>
             <button
               type="submit"
-              disabled={!canSubmit || create.isPending}
-              className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              disabled={create.isPending}
+              className="rounded-md bg-azulejo-600 hover:bg-azulejo-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {create.isPending ? 'Booking…' : 'Book'}
             </button>
           </div>
         </form>
     </SidePanel>
+  );
+}
+
+function fieldClass(invalid: boolean): string {
+  return `rounded-md border px-3 py-2 font-normal ${invalid ? 'border-red-400' : 'border-stone-300'}`;
+}
+
+function FieldHint({ id, children }: { id?: string; children: string }) {
+  return (
+    <span id={id} className="text-xs text-red-700">
+      {children}
+    </span>
   );
 }

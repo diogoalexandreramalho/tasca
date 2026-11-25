@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 
+import { AlertIcon, PhoneIcon } from '@/components/icons';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useCancelReservation } from '@/features/reservations/queries';
 import type { Reservation } from '@/features/reservations/types';
@@ -66,38 +67,45 @@ export function ReservationRow({
           {r.table.name}
         </span>
         <span className="font-medium">{r.customer.name}</span>
-        <span className="text-right text-stone-600 sm:text-left">{plural(r.party_size, 'guest')}</span>
+        <span className="text-right text-stone-600 sm:text-left">
+          {plural(r.party_size, 'guest')}
+        </span>
         <span className="col-start-2 text-stone-600 sm:col-start-auto">
           {formatPhone(r.customer.phone)}
         </span>
         <span
           className={`col-span-2 col-start-2 sm:col-span-1 sm:col-start-auto ${
             allergy
-              ? 'rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-900'
+              ? 'flex items-start gap-1.5 rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-900'
               : 'text-stone-600'
           } ${r.notes ? '' : 'hidden sm:block'}`}
           data-allergy={allergy || undefined}
         >
-          {allergy && <span aria-hidden>⚠ </span>}
-          {r.notes}
+          {allergy && (
+            <span className="pt-0.5">
+              <AlertIcon />
+            </span>
+          )}
+          <span>{r.notes}</span>
         </span>
-        <span className="col-start-2 flex gap-3 sm:col-start-auto sm:justify-end">
+        <span className="col-start-2 mt-1 flex gap-2 sm:col-start-auto sm:mt-0 sm:justify-end sm:gap-3">
           {r.created_in_conversation_id && onOpenCall && (
             <button
               type="button"
               onClick={() => onOpenCall(r.created_in_conversation_id!)}
-              className="whitespace-nowrap text-stone-500 underline-offset-2 hover:text-stone-900 hover:underline"
+              className="inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-lg border bg-white px-3.5 underline-offset-2 sm:h-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 hover:underline border-azulejo-100 text-azulejo-600 hover:text-azulejo-800"
               title="Booked by phone — view the call"
               aria-label={`View the call that booked ${r.customer.name}`}
             >
-              📞 call
+              <PhoneIcon />
+              Call
             </button>
           )}
           {canCancel && !confirming && (
             <button
               type="button"
               onClick={() => setConfirming(true)}
-              className="text-stone-500 underline-offset-2 hover:text-red-700 hover:underline"
+              className="inline-flex h-11 items-center gap-1 whitespace-nowrap rounded-lg border bg-white px-3.5 underline-offset-2 sm:h-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 hover:underline border-stone-300 text-stone-600 hover:text-red-700 sm:text-stone-500"
               aria-label={`Cancel booking for ${r.customer.name}`}
             >
               Cancel
@@ -123,7 +131,7 @@ export function ReservationRow({
                 setConfirming(false);
                 cancel.reset();
               }}
-              className="rounded-md border border-stone-300 bg-white px-3 py-1 hover:bg-stone-100"
+              className="h-11 rounded-md border border-stone-300 bg-white px-4 hover:bg-stone-100 sm:h-auto sm:px-3 sm:py-1"
             >
               Keep
             </button>
@@ -131,14 +139,16 @@ export function ReservationRow({
               type="button"
               onClick={confirmCancel}
               disabled={cancel.isPending}
-              className="rounded-md bg-red-700 px-3 py-1 font-medium text-white hover:bg-red-800 disabled:opacity-50"
+              className="h-11 rounded-md bg-red-700 px-4 font-medium text-white hover:bg-red-800 disabled:opacity-50 sm:h-auto sm:px-3 sm:py-1"
             >
               {cancel.isPending ? 'Cancelling…' : 'Yes, cancel'}
             </button>
           </span>
           {cancel.error && (
             <p role="alert" className="w-full text-red-700">
-              {cancel.error instanceof ApiError ? cancel.error.message : 'Could not reach the server.'}
+              {cancel.error instanceof ApiError
+                ? cancel.error.message
+                : 'Could not reach the server.'}
             </p>
           )}
         </div>

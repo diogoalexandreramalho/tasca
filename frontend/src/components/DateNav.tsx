@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons';
 import { addDays, formatLongDate, isIsoDate } from '@/lib/dates';
 
 type Props = {
@@ -18,18 +19,18 @@ export function DateNav({ date, today, onChange, children }: Props) {
         <button
           type="button"
           onClick={() => onChange(addDays(date, -1))}
-          className="rounded-md border border-stone-300 px-2.5 py-1.5 text-sm hover:bg-stone-100"
+          className="flex size-11 items-center justify-center rounded-md border border-stone-300 bg-white text-azulejo-800 hover:bg-stone-100 sm:size-8"
           aria-label="Previous day"
         >
-          ◀
+          <ChevronLeftIcon />
         </button>
         <button
           type="button"
           onClick={() => onChange(addDays(date, 1))}
-          className="rounded-md border border-stone-300 px-2.5 py-1.5 text-sm hover:bg-stone-100"
+          className="flex size-11 items-center justify-center rounded-md border border-stone-300 bg-white text-azulejo-800 hover:bg-stone-100 sm:size-8"
           aria-label="Next day"
         >
-          ▶
+          <ChevronRightIcon />
         </button>
       </div>
       <h1 className="text-xl font-semibold">{formatLongDate(date)}</h1>
@@ -38,7 +39,7 @@ export function DateNav({ date, today, onChange, children }: Props) {
           <button
             type="button"
             onClick={() => onChange(today)}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
+            className="h-11 rounded-md border border-stone-300 bg-white px-3 text-sm hover:bg-stone-100 sm:h-auto sm:py-1.5"
           >
             Today
           </button>
@@ -47,7 +48,7 @@ export function DateNav({ date, today, onChange, children }: Props) {
           type="date"
           value={date}
           onChange={(e) => isIsoDate(e.target.value) && onChange(e.target.value)}
-          className="rounded-md border border-stone-300 px-2 py-1.5 text-sm"
+          className="h-11 rounded-md border border-stone-300 bg-white px-2 text-sm sm:h-auto sm:py-1.5"
           aria-label="Pick a date"
         />
         {children}

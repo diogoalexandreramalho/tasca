@@ -1,1 +1,14 @@
 @import 'tailwindcss';
+
+/* Same palette as the customer website (website/src/index.css): azulejo blues on
+   cream, a terracotta accent. Stone stays for neutral text and borders. */
+@theme {
+  --color-cream: #fbf6ec;
+  --color-azulejo-50: #e6f1fb;
+  --color-azulejo-100: #b5d4f4;
+  --color-azulejo-400: #378add;
+  --color-azulejo-600: #185fa5;
+  --color-azulejo-800: #0c447c;
+  --color-azulejo-900: #042c53;
+  --font-display: 'Fraunces', Georgia, serif;
+}
